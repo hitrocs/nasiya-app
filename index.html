@@ -18,7 +18,8 @@ const { useState, useEffect, useMemo, useRef } = React;
 
 // ===== Supabase config =====
 const SUPABASE_URL = "https://zdnaphtdzfmoxhptnqyd.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpkbmFwaHRkemZtb3hocHRucXlkIiwicm9sZSI6ImФub24iLCJpYXQiOjE3ODIxNDM4MzgsImV4cCI6MjA5NzcxOTgzOH0.AQITLZJf4-txQDeW7Myn-LvEBaqSMZS5pSdHOYzhgf0";
+// ⚠️ DIQQAT: pastdagi kalitni Supabase → Settings → API → "anon public" dan o'zing nusxalab, tirnoq ichiga qo'y:
+const SUPABASE_KEY = "BU_YERGA_ANON_PUBLIC_KALITNI_QOY";
 const H = { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY, "Content-Type": "application/json" };
 
 const sb = {
