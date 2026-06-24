@@ -99,7 +99,7 @@ function AmountModal(props){
     h(Field,{label:props.label},h("input",{className:inputCls,inputMode:"numeric",placeholder:"0",value:amount?fmt(parseInt(amount.replace(/\D/g,""))||""):"",onChange:(e)=>setAmount(e.target.value),autoFocus:true})),
     h(Field,{label:"Izoh"},h("input",{className:inputCls,value:note,onChange:(e)=>setNote(e.target.value),placeholder:"ixtiyoriy"})),
     h("div",{className:"text-xs text-gray-400 mb-3"},"Sana: "+fmtDate(now())),
-    h("button",{onClick:submit,className:"w-full py-3 rounded-xl text-white font-semibold "+cc},"Saqlash"));
+    h("button",{onPointerUp:submit,className:"w-full py-3 rounded-xl text-white font-semibold "+cc},"Saqlash"));
 }
 function CustomerPicker(props){
   const db=props.db,value=props.value,onPick=props.onPick;
@@ -107,17 +107,17 @@ function CustomerPicker(props){
   const matches=useMemo(()=>!q.trim()?[]:db.customers.filter(c=>c.name.toLowerCase().indexOf(q.toLowerCase())>=0).slice(0,6),[q,db.customers]);
   if(value) return h("div",{className:"flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2.5"},
     h("div",null,h("div",{className:"font-medium text-gray-800"},value.name),h("div",{className:"text-xs text-gray-500"},value.phone)),
-    h("button",{onClick:()=>onPick(null),className:"text-gray-400"},IcX(18)));
+    h("button",{onPointerUp:()=>onPick(null),className:"text-gray-400 p-1"},IcX(18)));
   return h("div",null,
     h("input",{className:inputCls,placeholder:"Mijoz ismini yozing...",value:q,onChange:(e)=>{setQ(e.target.value);setAdding(false);}}),
     q.trim()&&h("div",{className:"mt-1 border border-gray-200 rounded-xl overflow-hidden"},
-      matches.map(c=>h("button",{key:c.id,onClick:()=>onPick(c),className:"w-full text-left px-3 py-2 hover:bg-gray-50 border-b last:border-0"},
+      matches.map(c=>h("button",{key:c.id,onPointerUp:()=>onPick(c),className:"w-full text-left px-3 py-2.5 hover:bg-gray-50 border-b last:border-0"},
         h("div",{className:"font-medium text-gray-800"},c.name),h("div",{className:"text-xs text-gray-500"},c.phone))),
-      matches.length===0&&!adding&&h("button",{onClick:()=>{setAdding(true);setNN(q);},className:"w-full text-left px-3 py-2.5 text-emerald-600 font-medium flex items-center gap-2"},IcPlus(16),' "'+q+'" — yangi mijoz qo\'shish')),
+      matches.length===0&&!adding&&h("button",{onPointerUp:()=>{setAdding(true);setNN(q);},className:"w-full text-left px-3 py-2.5 text-emerald-600 font-medium flex items-center gap-2"},IcPlus(16),' "'+q+'" — yangi mijoz qo\'shish')),
     adding&&h("div",{className:"mt-2 p-3 bg-gray-50 rounded-xl"},
       h("input",{className:inputCls+" mb-2",placeholder:"Ism",value:nn,onChange:(e)=>setNN(e.target.value)}),
       h("div",{className:"mb-2"},h(PhoneInput,{value:np,onChange:setNP})),
-      h("button",{onClick:()=>{if(nn.trim())onPick({__new:true,name:nn.trim(),phone:np.trim()});},className:"w-full bg-emerald-500 text-white py-2 rounded-xl font-medium"},"Qo'shish va tanlash")));
+      h("button",{onPointerUp:()=>{if(nn.trim())onPick({__new:true,name:nn.trim(),phone:np.trim()});},className:"w-full bg-emerald-500 text-white py-3 rounded-xl font-medium"},"Qo'shish va tanlash")));
 }
 
 // ===== Login ekrani =====
@@ -223,13 +223,13 @@ function TxnModal(props){
     h("p",{className:"text-gray-600 mb-2"},"Qarz: ",h("b",null,fmt(op.debt)),", to'lov: ",h("b",null,fmt(op.amt)),"."),
     h("p",{className:"text-gray-600 mb-4"},"Ortiqcha ",h("b",{className:"text-emerald-600"},fmt(op.surplus))," so'mni haqdor (+) qilaylikmi?"),
     h("div",{className:"grid grid-cols-2 gap-3"},
-      h("button",{onClick:()=>{run(()=>doSave(picked,op.debt));setOp(null);onClose();},className:"py-3 rounded-xl border text-gray-600 text-sm font-medium"},"Yo'q, qarzni yop"),
-      h("button",{onClick:()=>{run(()=>doSave(picked,op.amt));setOp(null);onClose();},className:"py-3 rounded-xl bg-emerald-500 text-white text-sm font-semibold"},"Ha, haqdor qil")));
+      h("button",{onPointerUp:()=>{run(()=>doSave(picked,op.debt));setOp(null);onClose();},className:"py-3 rounded-xl border text-gray-600 text-sm font-medium"},"Yo'q, qarzni yop"),
+      h("button",{onPointerUp:()=>{run(()=>doSave(picked,op.amt));setOp(null);onClose();},className:"py-3 rounded-xl bg-emerald-500 text-white text-sm font-semibold"},"Ha, haqdor qil")));
   return h(Modal,{title:type==="debt"?"Nasiya qo'shish":"To'lov qilish",onClose},
     h(Field,{label:"Mijoz"},h(CustomerPicker,{db,value:picked&&!picked.__new?db.customers.find(c=>c.id===picked.id):picked,onPick:setPicked})),
     h(Field,{label:type==="debt"?"Nasiya summasi":"To'lov summasi"},h("input",{className:inputCls,inputMode:"numeric",placeholder:"0",value:amount?fmt(parseInt(amount.replace(/\D/g,""))||""):"",onChange:(e)=>setAmount(e.target.value)})),
     h(Field,{label:"Izoh"},h("input",{className:inputCls,value:note,onChange:(e)=>setNote(e.target.value),placeholder:"ixtiyoriy"})),
-    h("button",{onClick:submit,className:"w-full py-3 rounded-xl text-white font-semibold "+(type==="debt"?"bg-rose-500":"bg-emerald-500")},"Saqlash"));
+    h("button",{onPointerUp:submit,className:"w-full py-3 rounded-xl text-white font-semibold "+(type==="debt"?"bg-rose-500":"bg-emerald-500")},"Saqlash"));
 }
 
 function CustomersPage(props){
@@ -278,13 +278,13 @@ function CustomerDetail(props){
         h("div",null,h("div",{className:"text-lg font-bold text-gray-800"},c.name),
           c.phone&&h("a",{href:"tel:"+c.phone,className:"text-emerald-600 text-sm flex items-center gap-1 mt-0.5"},IcPhone(14)," "+c.phone),
           c.note&&h("div",{className:"text-sm text-gray-400 mt-1"},c.note)),
-        h("div",{className:"flex gap-1"},h("button",{onClick:()=>setEdit(true),className:"p-2 text-gray-400"},IcEdit(18)),h("button",{onClick:()=>setCf({type:"cust"}),className:"p-2 text-rose-400"},IcTrash(18)))),
+        h("div",{className:"flex gap-1"},h("button",{onClick:()=>setEdit(true),className:"p-2 text-gray-400"},IcEdit(18)))),
       h("div",{className:"mt-3 pt-3 border-t"},h("span",{className:"text-gray-500 text-sm"},bal<0?"Nasiya (qarzdor): ":bal>0?"Haqdor: ":"Balans: "),h("span",{className:"text-xl font-bold "+balColor(bal)},signed(bal)+" so'm"))),
     h("div",{className:"grid grid-cols-2 gap-3 mb-4"},h("button",{onClick:()=>setModal("debt"),className:"bg-rose-500 text-white py-2.5 rounded-xl font-medium"},"+ Qarz qo'shish"),h("button",{onClick:()=>setModal("pay"),className:"bg-emerald-500 text-white py-2.5 rounded-xl font-medium"},"To'lov qabul")),
     h("h3",{className:"font-semibold text-gray-700 mb-2"},"Tarix"),
     h("div",{className:"space-y-2"},txns.map(t=>h("div",{key:t.id,className:"bg-white rounded-xl p-3 border flex items-center justify-between"},
       h("div",null,h("div",{className:"text-sm text-gray-600"},t.type==="debt"?"Nasiya":"To'lov"),h("div",{className:"text-xs text-gray-400"},fmtDate(t.date)+(t.note?" • "+t.note:""))),
-      h("div",{className:"flex items-center gap-2"},h("span",{className:"font-semibold "+(t.type==="debt"?"text-rose-500":"text-emerald-500")},(t.type==="debt"?"−":"+")+fmt(t.amount)),h("button",{onClick:()=>setCf({type:"txn",tid:t.id}),className:"text-gray-300"},IcTrash(16))))),
+      h("div",{className:"flex items-center gap-2"},h("span",{className:"font-semibold "+(t.type==="debt"?"text-rose-500":"text-emerald-500")},(t.type==="debt"?"−":"+")+fmt(t.amount))))),
       txns.length===0&&h("div",{className:"text-center text-gray-400 py-6"},"Tarix yo'q")),
     edit&&h(CustomerEditModal,{run,existing:c,onClose:()=>setEdit(false)}),
     modal&&h(AmountModal,{title:modal==="debt"?"Qarz qo'shish":"To'lov qabul qilish",label:modal==="debt"?"Nasiya summasi":"To'lov summasi",color:modal==="debt"?"rose":"emerald",onSubmit:(a,n)=>hSub(modal,a,n),onClose:()=>setModal(null)}),
@@ -325,17 +325,15 @@ function BakerDetail(props){
   const stat=(lbl,val,hl)=>h("div",{className:(hl?"bg-amber-50 border-amber-200":"bg-white")+" border rounded-xl p-3 text-center"},h("div",{className:"text-xs "+(hl?"text-amber-700":"text-gray-400")},lbl),h("div",{className:"font-bold "+(hl?"text-amber-700":"text-amber-600")+" text-lg"},fmt(val)+(hl?" ta":"")));
   return h("div",{className:"p-4"},
     h("button",{onClick:back,className:"flex items-center gap-1 text-gray-500 mb-3"},IcBack(18)," Orqaga"),
-    h("div",{className:"bg-white rounded-2xl p-4 border mb-3 flex items-start justify-between"},
-      h("div",null,h("div",{className:"text-lg font-bold text-gray-800"},b.name),b.phone&&h("a",{href:"tel:"+b.phone,className:"text-emerald-600 text-sm flex items-center gap-1"},IcPhone(14)," "+b.phone)),
-      h("button",{onClick:()=>setCf({type:"baker"}),className:"p-2 text-rose-400"},IcTrash(18))),
+    h("div",{className:"bg-white rounded-2xl p-4 border mb-3"},
+      h("div",null,h("div",{className:"text-lg font-bold text-gray-800"},b.name),b.phone&&h("a",{href:"tel:"+b.phone,className:"text-emerald-600 text-sm flex items-center gap-1"},IcPhone(14)," "+b.phone))),
     h("div",{className:"grid grid-cols-2 gap-2 mb-3"},stat("Bugun",td,true),stat("Jami",tot,false)),
     h("div",{className:"grid grid-cols-2 gap-2 mb-4"},stat("Hafta",wk,false),stat("Oy",mo,false)),
     h("div",{className:"flex gap-2 mb-4"},h("input",{className:inputCls,inputMode:"numeric",placeholder:"Bugungi non soni",value:count,onChange:(e)=>setCount(e.target.value.replace(/\D/g,""))}),h("button",{onClick:add,className:"bg-amber-500 text-white px-5 rounded-xl font-medium whitespace-nowrap"},"Qo'shish")),
     h("h3",{className:"font-semibold text-gray-700 mb-2"},"Kunlik kirimlar"),
     h("div",{className:"space-y-2"},entries.map(e=>h("div",{key:e.id,className:"bg-white rounded-xl p-3 border flex items-center justify-between"},
-      h("div",{className:"text-sm text-gray-600"},fmtDate(e.date)),h("div",{className:"flex items-center gap-2"},h("span",{className:"font-semibold text-amber-600"},fmt(e.count)+" ta"),h("button",{onClick:()=>setCf({type:"entry",eid:e.id}),className:"text-gray-300"},IcTrash(16))))),
-      entries.length===0&&h("div",{className:"text-center text-gray-400 py-6"},"Kirim yo'q")),
-    cf&&h(ConfirmModal,{title:cf.type==="baker"?"Nonvoyni o'chirish":"Kirimni o'chirish",message:cf.type==="baker"?'"'+b.name+'" o\'chirilsinmi?':"Bu kirim o'chirilsinmi?",onConfirm:()=>{if(cf.type==="baker"){run(()=>sb.remove("bakers",id));back();}else run(()=>sb.remove("baker_entries",cf.eid));},onClose:()=>setCf(null)}));
+      h("div",{className:"text-sm text-gray-600"},fmtDate(e.date)),h("span",{className:"font-semibold text-amber-600"},fmt(e.count)+" ta"))),
+      entries.length===0&&h("div",{className:"text-center text-gray-400 py-6"},"Kirim yo'q")));
 }
 
 function PartnersPage(props){
@@ -364,18 +362,16 @@ function PartnerDetail(props){
   const add=(t,a,n)=>run(()=>sb.insert("partner_txns",{id:uid(),partner_id:id,type:t,amount:a,note:n,date:now()}));
   return h("div",{className:"p-4"},
     h("button",{onClick:back,className:"flex items-center gap-1 text-gray-500 mb-3"},IcBack(18)," Orqaga"),
-    h("div",{className:"bg-white rounded-2xl p-4 border mb-3 flex items-start justify-between"},
+    h("div",{className:"bg-white rounded-2xl p-4 border mb-3"},
       h("div",null,h("div",{className:"text-lg font-bold text-gray-800"},p.name),p.phone&&h("a",{href:"tel:"+p.phone,className:"text-emerald-600 text-sm flex items-center gap-1"},IcPhone(14)," "+p.phone),
-        h("div",{className:"mt-2"},h("span",{className:"text-gray-500 text-sm"},"Qarzim: "),h("span",{className:"font-bold "+(bal>0?"text-indigo-600":"text-emerald-500")},fmt(bal)+" so'm"))),
-      h("button",{onClick:()=>setCf({type:"partner"}),className:"p-2 text-rose-400"},IcTrash(18))),
+        h("div",{className:"mt-2"},h("span",{className:"text-gray-500 text-sm"},"Qarzim: "),h("span",{className:"font-bold "+(bal>0?"text-indigo-600":"text-emerald-500")},fmt(bal)+" so'm")))),
     h("div",{className:"grid grid-cols-2 gap-3 mb-4"},h("button",{onClick:()=>setModal("buy"),className:"bg-indigo-500 text-white py-2.5 rounded-xl font-medium"},"+ Nasiya qo'shish"),h("button",{onClick:()=>setModal("pay"),className:"bg-emerald-500 text-white py-2.5 rounded-xl font-medium"},"To'lov qilish")),
     h("h3",{className:"font-semibold text-gray-700 mb-2"},"Tarix"),
     h("div",{className:"space-y-2"},txns.map(t=>h("div",{key:t.id,className:"bg-white rounded-xl p-3 border flex items-center justify-between"},
       h("div",null,h("div",{className:"text-sm text-gray-600"},t.type==="buy"?"Nasiya (mol olindi)":"To'lov qilindi"),h("div",{className:"text-xs text-gray-400"},fmtDate(t.date)+(t.note?" • "+t.note:""))),
-      h("div",{className:"flex items-center gap-2"},h("span",{className:"font-semibold "+(t.type==="buy"?"text-indigo-600":"text-emerald-500")},(t.type==="buy"?"+":"−")+fmt(t.amount)),h("button",{onClick:()=>setCf({type:"txn",tid:t.id}),className:"text-gray-300"},IcTrash(16))))),
+      h("div",{className:"flex items-center gap-2"},h("span",{className:"font-semibold "+(t.type==="buy"?"text-indigo-600":"text-emerald-500")},(t.type==="buy"?"+":"−")+fmt(t.amount))))),
       txns.length===0&&h("div",{className:"text-center text-gray-400 py-6"},"Tarix yo'q")),
-    modal&&h(AmountModal,{title:modal==="buy"?"Nasiya qo'shish":"To'lov qilish",label:modal==="buy"?"Nasiya summasi (qarz oshadi)":"To'lov summasi (qarz kamayadi)",color:modal==="buy"?"indigo":"emerald",onSubmit:(a,n)=>add(modal,a,n),onClose:()=>setModal(null)}),
-    cf&&h(ConfirmModal,{title:cf.type==="partner"?"Hamkorni o'chirish":"Amalni o'chirish",message:cf.type==="partner"?'"'+p.name+'" o\'chirilsinmi?':"Bu amal o'chirilsinmi?",onConfirm:()=>{if(cf.type==="partner"){run(()=>sb.remove("partners",id));back();}else run(()=>sb.remove("partner_txns",cf.tid));},onClose:()=>setCf(null)}));
+    modal&&h(AmountModal,{title:modal==="buy"?"Nasiya qo'shish":"To'lov qilish",label:modal==="buy"?"Nasiya summasi (qarz oshadi)":"To'lov summasi (qarz kamayadi)",color:modal==="buy"?"indigo":"emerald",onSubmit:(a,n)=>add(modal,a,n),onClose:()=>setModal(null)}));
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(h(App));
