@@ -3,166 +3,152 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Mini Market — Hisob-kitob</title>
+<title>Mini Market</title>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
-<style> body { font-family: system-ui, sans-serif; } * { -webkit-tap-highlight-color: transparent; } </style>
+<style> body{font-family:system-ui,sans-serif} *{-webkit-tap-highlight-color:transparent} </style>
 </head>
 <body class="bg-gray-50">
 <div id="root"></div>
+<script>
+// htm — JSX o'rniga, Babel'siz. Brauzer to'g'ridan-to'g'ri o'qiydi.
+const { useState, useEffect, useMemo, useRef, createElement } = React;
+const h = createElement;
 
-<script type="text/babel">
-const { useState, useEffect, useMemo, useRef } = React;
-
-// ===== Supabase config =====
+// ===== Supabase =====
 const SUPABASE_URL = "https://zdnaphtdzfmoxhptnqyd.supabase.co";
-// ⚠️ DIQQAT: pastdagi kalitni Supabase → Settings → API → "anon public" dan o'zing nusxalab, tirnoq ichiga qo'y:
+// ⚠️ Supabase > Settings > API > "anon public" kalitini shu yerga qo'y (tirnoq ichiga):
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpkbmFwaHRkemZtb3hocHRucXlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNDM4MzgsImV4cCI6MjA5NzcxOTgzOH0.AQITLZJf4-txQDeW7Myn-LvEBaqSMZS5pSdHOYzhgf0";
-const H = { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY, "Content-Type": "application/json" };
-
+const HDR = { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY, "Content-Type": "application/json" };
 const sb = {
-  async select(t){ const r=await fetch(`${SUPABASE_URL}/rest/v1/${t}?select=*`,{headers:H}); if(!r.ok) throw new Error(await r.text()); return r.json(); },
-  async insert(t,row){ const r=await fetch(`${SUPABASE_URL}/rest/v1/${t}`,{method:"POST",headers:{...H,Prefer:"return=minimal"},body:JSON.stringify(row)}); if(!r.ok) throw new Error(await r.text()); },
-  async update(t,id,p){ const r=await fetch(`${SUPABASE_URL}/rest/v1/${t}?id=eq.${id}`,{method:"PATCH",headers:{...H,Prefer:"return=minimal"},body:JSON.stringify(p)}); if(!r.ok) throw new Error(await r.text()); },
-  async remove(t,id){ const r=await fetch(`${SUPABASE_URL}/rest/v1/${t}?id=eq.${id}`,{method:"DELETE",headers:H}); if(!r.ok) throw new Error(await r.text()); },
+  select: async (t) => { const r = await fetch(SUPABASE_URL+"/rest/v1/"+t+"?select=*",{headers:HDR}); if(!r.ok) throw new Error(await r.text()); return r.json(); },
+  insert: async (t,row) => { const r = await fetch(SUPABASE_URL+"/rest/v1/"+t,{method:"POST",headers:Object.assign({},HDR,{Prefer:"return=minimal"}),body:JSON.stringify(row)}); if(!r.ok) throw new Error(await r.text()); },
+  update: async (t,id,p) => { const r = await fetch(SUPABASE_URL+"/rest/v1/"+t+"?id=eq."+id,{method:"PATCH",headers:Object.assign({},HDR,{Prefer:"return=minimal"}),body:JSON.stringify(p)}); if(!r.ok) throw new Error(await r.text()); },
+  remove: async (t,id) => { const r = await fetch(SUPABASE_URL+"/rest/v1/"+t+"?id=eq."+id,{method:"DELETE",headers:HDR}); if(!r.ok) throw new Error(await r.text()); },
 };
 async function fetchDB(){
-  const [customers,partners,bakers,cT,pT,bE]=await Promise.all([
-    sb.select("customers"),sb.select("partners"),sb.select("bakers"),
-    sb.select("customer_txns"),sb.select("partner_txns"),sb.select("baker_entries")]);
-  const mt=t=>({id:t.id,type:t.type,amount:t.amount,note:t.note,date:t.date});
+  const res = await Promise.all([sb.select("customers"),sb.select("partners"),sb.select("bakers"),sb.select("customer_txns"),sb.select("partner_txns"),sb.select("baker_entries")]);
+  const [customers,partners,bakers,cT,pT,bE] = res;
+  const mt = (t)=>({id:t.id,type:t.type,amount:t.amount,note:t.note,date:t.date});
   return {
-    customers:customers.map(c=>({...c,txns:cT.filter(t=>t.customer_id===c.id).map(mt)})),
-    partners:partners.map(p=>({...p,txns:pT.filter(t=>t.partner_id===p.id).map(mt)})),
-    bakers:bakers.map(b=>({...b,entries:bE.filter(e=>e.baker_id===b.id).map(e=>({id:e.id,count:e.count,date:e.date}))})),
+    customers: customers.map(c=>Object.assign({},c,{txns:cT.filter(t=>t.customer_id===c.id).map(mt)})),
+    partners: partners.map(p=>Object.assign({},p,{txns:pT.filter(t=>t.partner_id===p.id).map(mt)})),
+    bakers: bakers.map(b=>Object.assign({},b,{entries:bE.filter(e=>e.baker_id===b.id).map(e=>({id:e.id,count:e.count,date:e.date}))})),
   };
 }
 
 // ===== Utils =====
-const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-const fmt=n=>(n||0).toLocaleString("ru-RU");
-const signed=n=>(n>0?"+":n<0?"−":"")+fmt(Math.abs(n));
-const balColor=n=>(n>0?"text-emerald-500":n<0?"text-rose-500":"text-gray-400");
-const now=()=>new Date().toISOString();
-const fmtDate=iso=>{const d=new Date(iso);return d.toLocaleDateString("ru-RU")+" "+d.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"});};
-const isSameDay=(iso,ref)=>{const a=new Date(iso),b=new Date(ref);return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();};
-const customerBalance=c=>c.txns.reduce((s,t)=>s+(t.type==="debt"?-t.amount:t.amount),0);
-const partnerBalance=p=>p.txns.reduce((s,t)=>s+(t.type==="buy"?t.amount:-t.amount),0);
-const inputCls="w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 text-gray-800";
-const fp=raw=>{let d=(raw||"").replace(/\D/g,"");if(d.startsWith("998"))d=d.slice(3);d=d.slice(0,9);let o="+998";if(d.length>0)o+=" "+d.slice(0,2);if(d.length>2)o+=" "+d.slice(2,5);if(d.length>5)o+=" "+d.slice(5,7);if(d.length>7)o+=" "+d.slice(7,9);return o;};
+const uid = ()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const fmt = (n)=>(n||0).toLocaleString("ru-RU");
+const signed = (n)=>(n>0?"+":n<0?"−":"")+fmt(Math.abs(n));
+const balColor = (n)=>(n>0?"text-emerald-500":n<0?"text-rose-500":"text-gray-400");
+const now = ()=>new Date().toISOString();
+const fmtDate = (iso)=>{const d=new Date(iso);return d.toLocaleDateString("ru-RU")+" "+d.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"});};
+const isSameDay = (iso,ref)=>{const a=new Date(iso),b=new Date(ref);return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();};
+const cBal = (c)=>c.txns.reduce((s,t)=>s+(t.type==="debt"?-t.amount:t.amount),0);
+const pBal = (p)=>p.txns.reduce((s,t)=>s+(t.type==="buy"?t.amount:-t.amount),0);
+const inputCls = "w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 text-gray-800";
+const fp = (raw)=>{let d=(raw||"").replace(/\D/g,"");if(d.indexOf("998")===0)d=d.slice(3);d=d.slice(0,9);let o="+998";if(d.length>0)o+=" "+d.slice(0,2);if(d.length>2)o+=" "+d.slice(2,5);if(d.length>5)o+=" "+d.slice(5,7);if(d.length>7)o+=" "+d.slice(7,9);return o;};
 
-// ===== Icons (inline SVG, tejash uchun) =====
-const Ic=({d,s=20})=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{d}</svg>;
-const IcoHome=p=><Ic {...p} d={<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>}/>;
-const IcoUsers=p=><Ic {...p} d={<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></>}/>;
-const IcoWheat=p=><Ic {...p} d={<><path d="M2 22l10-10M16 8l-4 4M12 2v4M7 7l3 3M17 7l-3 3"/></>}/>;
-const IcoBuild=p=><Ic {...p} d={<><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M16 6h.01M8 10h.01M16 10h.01M8 14h.01M16 14h.01"/></>}/>;
-const IcoSearch=p=><Ic {...p} d={<><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></>}/>;
-const IcoPlus=p=><Ic {...p} d={<><path d="M12 5v14M5 12h14"/></>}/>;
-const IcoBack=p=><Ic {...p} d={<><path d="M19 12H5M12 19l-7-7 7-7"/></>}/>;
-const IcoPhone=p=><Ic {...p} d={<><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></>}/>;
-const IcoEdit=p=><Ic {...p} d={<><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></>}/>;
-const IcoTrash=p=><Ic {...p} d={<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></>}/>;
-const IcoX=p=><Ic {...p} d={<><path d="M18 6L6 18M6 6l12 12"/></>}/>;
-const IcoCal=p=><Ic {...p} d={<><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></>}/>;
-const IcoWifi=p=><Ic {...p} d={<><path d="M5 12.55a11 11 0 0 1 14 0M8.5 16.11a6 6 0 0 1 7 0M2 8.82a15 15 0 0 1 20 0"/><line x1="12" y1="20" x2="12" y2="20"/></>}/>;
-const IcoWifiOff=p=><Ic {...p} d={<><path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22 8.82M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></>}/>;
+// ===== Icon (oddiy emoji-siz SVG path) =====
+function Svg(path,s){ return h("svg",{width:s||20,height:s||20,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round"}, path.map((d,i)=>h("path",{key:i,d:d}))); }
+const IcHome=(s)=>Svg(["M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z","M9 22V12h6v10"],s);
+const IcUsers=(s)=>Svg(["M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2","M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z","M23 21v-2a4 4 0 0 0-3-3.87"],s);
+const IcWheat=(s)=>Svg(["M2 22l10-10","M16 8l-4 4","M12 2v4","M7 7l3 3","M17 7l-3 3"],s);
+const IcBuild=(s)=>Svg(["M4 22V4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v18","M9 22v-4h6v4","M8 6h.01M16 6h.01M8 10h.01M16 10h.01M8 14h.01M16 14h.01"],s);
+const IcSearch=(s)=>Svg(["M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z","M21 21l-4.35-4.35"],s);
+const IcPlus=(s)=>Svg(["M12 5v14","M5 12h14"],s);
+const IcBack=(s)=>Svg(["M19 12H5","M12 19l-7-7 7-7"],s);
+const IcPhone=(s)=>Svg(["M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"],s);
+const IcEdit=(s)=>Svg(["M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7","M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"],s);
+const IcTrash=(s)=>Svg(["M3 6h18","M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"],s);
+const IcX=(s)=>Svg(["M18 6L6 18","M6 6l12 12"],s);
+const IcCal=(s)=>Svg(["M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z","M16 2v4M8 2v4M3 10h18"],s);
+const IcWifi=(s)=>Svg(["M5 12.55a11 11 0 0 1 14 0","M8.5 16.11a6 6 0 0 1 7 0","M2 8.82a15 15 0 0 1 20 0","M12 20h.01"],s);
+const IcWifiOff=(s)=>Svg(["M1 1l22 22","M16.72 11.06A10.94 10.94 0 0 1 19 12.55","M5 12.55a10.94 10.94 0 0 1 5.17-2.39","M10.71 5.05A16 16 0 0 1 22 8.82","M1.42 9a15.91 15.91 0 0 1 4.7-2.88","M8.53 16.11a6 6 0 0 1 6.95 0","M12 20h.01"],s);
 
-// ===== Small UI =====
-function Modal({children,onClose,title}){
-  return <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={onClose}>
-    <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl max-h-[92vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
-      <div className="flex items-center justify-between px-4 py-3 border-b sticky top-0 bg-white">
-        <h3 className="font-semibold text-gray-800">{title}</h3>
-        <button onClick={onClose} className="p-1 text-gray-400"><IcoX s={22}/></button>
-      </div>
-      <div className="p-4">{children}</div>
-    </div>
-  </div>;
+// ===== UI helpers =====
+function Modal(props){
+  return h("div",{className:"fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40",onClick:props.onClose},
+    h("div",{className:"bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl max-h-[92vh] overflow-y-auto",onClick:(e)=>e.stopPropagation()},
+      h("div",{className:"flex items-center justify-between px-4 py-3 border-b sticky top-0 bg-white"},
+        h("h3",{className:"font-semibold text-gray-800"},props.title),
+        h("button",{onClick:props.onClose,className:"p-1 text-gray-400"},IcX(22))),
+      h("div",{className:"p-4"},props.children)));
 }
-const Field=({label,children})=><label className="block mb-3"><span className="text-sm text-gray-600 mb-1 block">{label}</span>{children}</label>;
-const PhoneInput=({value,onChange})=><input className={inputCls} inputMode="numeric" placeholder="+998 90 123 45 67" value={fp(value)} onChange={e=>onChange(fp(e.target.value))}/>;
+function Field(props){ return h("label",{className:"block mb-3"},h("span",{className:"text-sm text-gray-600 mb-1 block"},props.label),props.children); }
+function PhoneInput(props){ return h("input",{className:inputCls,inputMode:"numeric",placeholder:"+998 90 123 45 67",value:fp(props.value),onChange:(e)=>props.onChange(fp(e.target.value))}); }
 
-function ConfirmModal({title,message,onConfirm,onClose}){
-  return <Modal title={title||"Tasdiqlash"} onClose={onClose}>
-    <p className="text-gray-600 mb-4">{message}</p>
-    <div className="grid grid-cols-2 gap-3">
-      <button onClick={onClose} className="py-3 rounded-xl border text-gray-600 font-medium">Bekor</button>
-      <button onClick={()=>{onConfirm();onClose();}} className="py-3 rounded-xl bg-rose-500 text-white font-semibold">O'chirish</button>
-    </div>
-  </Modal>;
+function ConfirmModal(props){
+  return h(Modal,{title:props.title||"Tasdiqlash",onClose:props.onClose},
+    h("p",{className:"text-gray-600 mb-4"},props.message),
+    h("div",{className:"grid grid-cols-2 gap-3"},
+      h("button",{onClick:props.onClose,className:"py-3 rounded-xl border text-gray-600 font-medium"},"Bekor"),
+      h("button",{onClick:()=>{props.onConfirm();props.onClose();},className:"py-3 rounded-xl bg-rose-500 text-white font-semibold"},"O'chirish")));
 }
-function AmountModal({title,label,color,onSubmit,onClose}){
+function AmountModal(props){
   const [amount,setAmount]=useState(""); const [note,setNote]=useState("");
-  const submit=()=>{const a=parseInt(amount.replace(/\D/g,""),10);if(!a)return;onSubmit(a,note.trim());onClose();};
-  const cc=color==="rose"?"bg-rose-500":color==="indigo"?"bg-indigo-500":"bg-emerald-500";
-  return <Modal title={title} onClose={onClose}>
-    <Field label={label}><input className={inputCls} inputMode="numeric" placeholder="0" value={amount?fmt(parseInt(amount.replace(/\D/g,""))||""):""} onChange={e=>setAmount(e.target.value)} autoFocus/></Field>
-    <Field label="Izoh"><input className={inputCls} value={note} onChange={e=>setNote(e.target.value)} placeholder="ixtiyoriy"/></Field>
-    <div className="text-xs text-gray-400 mb-3">Sana: {fmtDate(now())}</div>
-    <button onClick={submit} className={"w-full py-3 rounded-xl text-white font-semibold "+cc}>Saqlash</button>
-  </Modal>;
+  const submit=()=>{const a=parseInt(amount.replace(/\D/g,""),10);if(!a)return;props.onSubmit(a,note.trim());props.onClose();};
+  const cc=props.color==="rose"?"bg-rose-500":props.color==="indigo"?"bg-indigo-500":"bg-emerald-500";
+  return h(Modal,{title:props.title,onClose:props.onClose},
+    h(Field,{label:props.label},h("input",{className:inputCls,inputMode:"numeric",placeholder:"0",value:amount?fmt(parseInt(amount.replace(/\D/g,""))||""):"",onChange:(e)=>setAmount(e.target.value),autoFocus:true})),
+    h(Field,{label:"Izoh"},h("input",{className:inputCls,value:note,onChange:(e)=>setNote(e.target.value),placeholder:"ixtiyoriy"})),
+    h("div",{className:"text-xs text-gray-400 mb-3"},"Sana: "+fmtDate(now())),
+    h("button",{onClick:submit,className:"w-full py-3 rounded-xl text-white font-semibold "+cc},"Saqlash"));
 }
-function CustomerPicker({db,value,onPick}){
-  const [q,setQ]=useState(""); const [adding,setAdding]=useState(false);
-  const [nn,setNN]=useState(""); const [np,setNP]=useState("");
-  const matches=useMemo(()=>!q.trim()?[]:db.customers.filter(c=>c.name.toLowerCase().includes(q.toLowerCase())).slice(0,6),[q,db.customers]);
-  if(value) return <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2.5">
-    <div><div className="font-medium text-gray-800">{value.name}</div><div className="text-xs text-gray-500">{value.phone}</div></div>
-    <button onClick={()=>onPick(null)} className="text-gray-400"><IcoX s={18}/></button></div>;
-  return <div>
-    <input className={inputCls} placeholder="Mijoz ismini yozing..." value={q} onChange={e=>{setQ(e.target.value);setAdding(false);}}/>
-    {q.trim()&&<div className="mt-1 border border-gray-200 rounded-xl overflow-hidden">
-      {matches.map(c=><button key={c.id} onClick={()=>onPick(c)} className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b last:border-0">
-        <div className="font-medium text-gray-800">{c.name}</div><div className="text-xs text-gray-500">{c.phone}</div></button>)}
-      {matches.length===0&&!adding&&<button onClick={()=>{setAdding(true);setNN(q);}} className="w-full text-left px-3 py-2.5 text-emerald-600 font-medium flex items-center gap-2"><IcoPlus s={16}/> "{q}" — yangi mijoz qo'shish</button>}
-    </div>}
-    {adding&&<div className="mt-2 p-3 bg-gray-50 rounded-xl">
-      <input className={inputCls+" mb-2"} placeholder="Ism" value={nn} onChange={e=>setNN(e.target.value)}/>
-      <div className="mb-2"><PhoneInput value={np} onChange={setNP}/></div>
-      <button onClick={()=>{if(nn.trim())onPick({__new:true,name:nn.trim(),phone:np.trim()});}} className="w-full bg-emerald-500 text-white py-2 rounded-xl font-medium">Qo'shish va tanlash</button>
-    </div>}
-  </div>;
+function CustomerPicker(props){
+  const db=props.db,value=props.value,onPick=props.onPick;
+  const [q,setQ]=useState(""); const [adding,setAdding]=useState(false); const [nn,setNN]=useState(""); const [np,setNP]=useState("");
+  const matches=useMemo(()=>!q.trim()?[]:db.customers.filter(c=>c.name.toLowerCase().indexOf(q.toLowerCase())>=0).slice(0,6),[q,db.customers]);
+  if(value) return h("div",{className:"flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2.5"},
+    h("div",null,h("div",{className:"font-medium text-gray-800"},value.name),h("div",{className:"text-xs text-gray-500"},value.phone)),
+    h("button",{onClick:()=>onPick(null),className:"text-gray-400"},IcX(18)));
+  return h("div",null,
+    h("input",{className:inputCls,placeholder:"Mijoz ismini yozing...",value:q,onChange:(e)=>{setQ(e.target.value);setAdding(false);}}),
+    q.trim()&&h("div",{className:"mt-1 border border-gray-200 rounded-xl overflow-hidden"},
+      matches.map(c=>h("button",{key:c.id,onClick:()=>onPick(c),className:"w-full text-left px-3 py-2 hover:bg-gray-50 border-b last:border-0"},
+        h("div",{className:"font-medium text-gray-800"},c.name),h("div",{className:"text-xs text-gray-500"},c.phone))),
+      matches.length===0&&!adding&&h("button",{onClick:()=>{setAdding(true);setNN(q);},className:"w-full text-left px-3 py-2.5 text-emerald-600 font-medium flex items-center gap-2"},IcPlus(16),' "'+q+'" — yangi mijoz qo\'shish')),
+    adding&&h("div",{className:"mt-2 p-3 bg-gray-50 rounded-xl"},
+      h("input",{className:inputCls+" mb-2",placeholder:"Ism",value:nn,onChange:(e)=>setNN(e.target.value)}),
+      h("div",{className:"mb-2"},h(PhoneInput,{value:np,onChange:setNP})),
+      h("button",{onClick:()=>{if(nn.trim())onPick({__new:true,name:nn.trim(),phone:np.trim()});},className:"w-full bg-emerald-500 text-white py-2 rounded-xl font-medium"},"Qo'shish va tanlash")));
 }
 
 // ===== App =====
 function App(){
-  const [db,setDb]=useState(null); const [tab,setTab]=useState("home");
-  const [view,setView]=useState({page:null,id:null});
-  const [status,setStatus]=useState("loading"); const [errMsg,setErrMsg]=useState("");
-  const pollRef=useRef(null);
-  const reload=async()=>{try{setDb(await fetchDB());setStatus("online");}catch(e){setStatus("error");setErrMsg(String(e.message||e));}};
+  const [db,setDb]=useState(null); const [tab,setTab]=useState("home"); const [view,setView]=useState({page:null,id:null});
+  const [status,setStatus]=useState("loading"); const [errMsg,setErrMsg]=useState(""); const pollRef=useRef(null);
+  const reload=async()=>{try{const d=await fetchDB();setDb(d);setStatus("online");}catch(e){setStatus("error");setErrMsg(String(e.message||e));}};
   useEffect(()=>{reload();pollRef.current=setInterval(reload,4000);return()=>clearInterval(pollRef.current);},[]);
-  const run=async fn=>{try{await fn();await reload();}catch(e){setStatus("error");setErrMsg(String(e.message||e));alert("Xatolik: "+(e.message||e));}};
-  if(status==="loading"&&!db) return <div className="p-8 text-center text-gray-400">Yuklanmoqda...</div>;
-  if(status==="error"&&!db) return <div className="p-8 text-center"><div className="text-rose-400 mb-3 flex justify-center"><IcoWifiOff s={40}/></div>
-    <div className="text-gray-700 font-medium mb-2">Bazaga ulanib bo'lmadi</div><div className="text-xs text-gray-400 mb-4 break-all">{errMsg}</div>
-    <button onClick={reload} className="bg-emerald-500 text-white px-5 py-2 rounded-xl">Qayta urinish</button></div>;
-  const nav=[{k:"home",I:IcoHome,l:"Bosh sahifa"},{k:"customers",I:IcoUsers,l:"Mijozlar"},{k:"bakers",I:IcoWheat,l:"Nonvoylar"},{k:"partners",I:IcoBuild,l:"Hamkorlar"}];
-  return <div className="max-w-md mx-auto min-h-screen bg-gray-50 flex flex-col">
-    <div className="flex-1 overflow-y-auto pb-20">
-      {tab==="home"&&<HomePage db={db} run={run} status={status}/>}
-      {tab==="customers"&&(view.page==="customer"?<CustomerDetail db={db} run={run} id={view.id} back={()=>setView({page:null})}/>:<CustomersPage db={db} run={run} open={id=>setView({page:"customer",id})}/>)}
-      {tab==="bakers"&&(view.page==="baker"?<BakerDetail db={db} run={run} id={view.id} back={()=>setView({page:null})}/>:<BakersPage db={db} run={run} open={id=>setView({page:"baker",id})}/>)}
-      {tab==="partners"&&(view.page==="partner"?<PartnerDetail db={db} run={run} id={view.id} back={()=>setView({page:null})}/>:<PartnersPage db={db} run={run} open={id=>setView({page:"partner",id})}/>)}
-    </div>
-    <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t flex">
-      {nav.map(t=><button key={t.k} onClick={()=>{setTab(t.k);setView({page:null});}} className={"flex-1 flex flex-col items-center py-2 text-xs "+(tab===t.k?"text-emerald-600":"text-gray-400")}><t.I/><span className="mt-0.5">{t.l}</span></button>)}
-    </nav>
-  </div>;
+  const run=async(fn)=>{try{await fn();await reload();}catch(e){setStatus("error");setErrMsg(String(e.message||e));alert("Xatolik: "+(e.message||e));}};
+  if(status==="loading"&&!db) return h("div",{className:"p-8 text-center text-gray-400"},"Yuklanmoqda...");
+  if(status==="error"&&!db) return h("div",{className:"p-8 text-center"},
+    h("div",{className:"text-rose-400 mb-3 flex justify-center"},IcWifiOff(40)),
+    h("div",{className:"text-gray-700 font-medium mb-2"},"Bazaga ulanib bo'lmadi"),
+    h("div",{className:"text-xs text-gray-400 mb-4 break-all"},errMsg),
+    h("button",{onClick:reload,className:"bg-emerald-500 text-white px-5 py-2 rounded-xl"},"Qayta urinish"));
+  const nav=[["home",IcHome,"Bosh sahifa"],["customers",IcUsers,"Mijozlar"],["bakers",IcWheat,"Nonvoylar"],["partners",IcBuild,"Hamkorlar"]];
+  let page;
+  if(tab==="home") page=h(HomePage,{db,run,status});
+  else if(tab==="customers") page=view.page==="customer"?h(CustomerDetail,{db,run,id:view.id,back:()=>setView({page:null})}):h(CustomersPage,{db,run,open:(id)=>setView({page:"customer",id})});
+  else if(tab==="bakers") page=view.page==="baker"?h(BakerDetail,{db,run,id:view.id,back:()=>setView({page:null})}):h(BakersPage,{db,run,open:(id)=>setView({page:"baker",id})});
+  else if(tab==="partners") page=view.page==="partner"?h(PartnerDetail,{db,run,id:view.id,back:()=>setView({page:null})}):h(PartnersPage,{db,run,open:(id)=>setView({page:"partner",id})});
+  return h("div",{className:"max-w-md mx-auto min-h-screen bg-gray-50 flex flex-col"},
+    h("div",{className:"flex-1 overflow-y-auto pb-20"},page),
+    h("nav",{className:"fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t flex"},
+      nav.map(n=>h("button",{key:n[0],onClick:()=>{setTab(n[0]);setView({page:null});},className:"flex-1 flex flex-col items-center py-2 text-xs "+(tab===n[0]?"text-emerald-600":"text-gray-400")},n[1](20),h("span",{className:"mt-0.5"},n[2])))));
 }
 
-function HomePage({db,run,status}){
-  const [modal,setModal]=useState(null); const [filter,setFilter]=useState("today");
-  const [cr,setCR]=useState({from:"",to:""}); const [showCal,setShowCal]=useState(false);
-  const debtors=db.customers.filter(c=>customerBalance(c)<0);
-  const totalDebt=debtors.reduce((s,c)=>s+Math.abs(customerBalance(c)),0);
-  const all=db.customers.flatMap(c=>c.txns.map(t=>({...t,customer:c.name})));
-  const tdD=all.filter(t=>t.type==="debt"&&isSameDay(t.date,now()));
-  const tdP=all.filter(t=>t.type==="pay"&&isSameDay(t.date,now()));
-  const inR=iso=>{const d=new Date(iso),n=new Date();
+function HomePage(props){
+  const db=props.db,run=props.run,status=props.status;
+  const [modal,setModal]=useState(null); const [filter,setFilter]=useState("today"); const [cr,setCR]=useState({from:"",to:""}); const [showCal,setShowCal]=useState(false);
+  const debtors=db.customers.filter(c=>cBal(c)<0);
+  const totalDebt=debtors.reduce((s,c)=>s+Math.abs(cBal(c)),0);
+  const all=db.customers.flatMap(c=>c.txns.map(t=>Object.assign({},t,{customer:c.name})));
+  const tdD=all.filter(t=>t.type==="debt"&&isSameDay(t.date,now())); const tdP=all.filter(t=>t.type==="pay"&&isSameDay(t.date,now()));
+  const inR=(iso)=>{const d=new Date(iso),n=new Date();
     if(filter==="today")return isSameDay(iso,now());
     if(filter==="week")return(n-d)/864e5<=7;
     if(filter==="month")return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear();
@@ -170,212 +156,205 @@ function HomePage({db,run,status}){
     return true;};
   const rng=all.filter(t=>inR(t.date)).sort((a,b)=>new Date(b.date)-new Date(a.date));
   const rD=rng.filter(t=>t.type==="debt"),rP=rng.filter(t=>t.type==="pay");
-  const rLbl=()=>{if(filter!=="custom"||!cr.from)return"Sana tanlash";const f=new Date(cr.from).toLocaleDateString("ru-RU");return(!cr.to||cr.to===cr.from)?f:f+" – "+new Date(cr.to).toLocaleDateString("ru-RU");};
-  return <div className="p-4">
-    <div className="flex items-center justify-between mb-4">
-      <h1 className="text-xl font-bold text-gray-800">Bosh sahifa</h1>
-      <div className={"flex items-center gap-1 text-xs px-2 py-1 rounded-full "+(status==="online"?"bg-emerald-50 text-emerald-600":"bg-rose-50 text-rose-500")}>{status==="online"?<IcoWifi s={13}/>:<IcoWifiOff s={13}/>} {status==="online"?"Sinxron":"Ulanmoqda"}</div>
-    </div>
-    <div className="bg-gradient-to-br from-rose-500 to-pink-600 rounded-2xl p-5 text-white mb-3">
-      <div className="flex items-center justify-between"><div className="text-rose-100 text-sm">Umumiy nasiya (qarzdorlar)</div><div className="bg-white/20 rounded-full px-2.5 py-0.5 text-xs">{debtors.length} ta</div></div>
-      <div className="text-3xl font-bold mt-1">{fmt(totalDebt)} <span className="text-lg font-normal">so'm</span></div>
-    </div>
-    <div className="grid grid-cols-2 gap-3 mb-4">
-      <div className="bg-white rounded-2xl p-4 border"><div className="flex items-center justify-between"><span className="text-rose-500 text-sm">Bugungi nasiya</span><span className="text-xs text-gray-400">{tdD.length} ta</span></div><div className="text-xl font-bold text-gray-800 mt-1">{fmt(tdD.reduce((s,t)=>s+t.amount,0))}</div></div>
-      <div className="bg-white rounded-2xl p-4 border"><div className="flex items-center justify-between"><span className="text-emerald-500 text-sm">Bugungi to'lov</span><span className="text-xs text-gray-400">{tdP.length} ta</span></div><div className="text-xl font-bold text-gray-800 mt-1">{fmt(tdP.reduce((s,t)=>s+t.amount,0))}</div></div>
-    </div>
-    <div className="grid grid-cols-2 gap-3 mb-5">
-      <button onClick={()=>setModal("debt")} className="bg-rose-500 text-white py-3 rounded-2xl font-semibold flex items-center justify-center gap-2"><IcoPlus s={18}/> Nasiya qo'shish</button>
-      <button onClick={()=>setModal("pay")} className="bg-emerald-500 text-white py-3 rounded-2xl font-semibold">To'lov qilish</button>
-    </div>
-    <div className="flex gap-2 mb-3 flex-wrap">
-      {[["today","Bugun"],["week","Hafta"],["month","Oy"],["all","Hammasi"]].map(([k,l])=><button key={k} onClick={()=>setFilter(k)} className={"px-3 py-1.5 rounded-full text-sm "+(filter===k?"bg-emerald-500 text-white":"bg-white border text-gray-600")}>{l}</button>)}
-      <button onClick={()=>setShowCal(true)} className={"px-3 py-1.5 rounded-full text-sm flex items-center gap-1 "+(filter==="custom"?"bg-emerald-500 text-white":"bg-white border text-gray-600")}><IcoCal s={14}/> {rLbl()}</button>
-    </div>
-    <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
-      <div className="bg-white rounded-xl p-3 border"><div className="flex justify-between"><span className="text-gray-500">Nasiya</span><span className="text-xs text-gray-400">{rD.length} ta</span></div><span className="font-semibold text-rose-500">{fmt(rD.reduce((s,t)=>s+t.amount,0))}</span></div>
-      <div className="bg-white rounded-xl p-3 border"><div className="flex justify-between"><span className="text-gray-500">To'lov</span><span className="text-xs text-gray-400">{rP.length} ta</span></div><span className="font-semibold text-emerald-500">{fmt(rP.reduce((s,t)=>s+t.amount,0))}</span></div>
-    </div>
-    <h2 className="font-semibold text-gray-700 mb-2">So'nggi amallar</h2>
-    <div className="space-y-2">
-      {rng.slice(0,30).map(t=><div key={t.id} className="bg-white rounded-xl p-3 border flex items-center justify-between">
-        <div><div className="font-medium text-gray-800">{t.customer}</div><div className="text-xs text-gray-400">{fmtDate(t.date)}{t.note?" • "+t.note:""}</div></div>
-        <div className={"font-semibold "+(t.type==="debt"?"text-rose-500":"text-emerald-500")}>{t.type==="debt"?"−":"+"}{fmt(t.amount)}</div></div>)}
-      {rng.length===0&&<div className="text-center text-gray-400 py-6">Amal yo'q</div>}
-    </div>
-    {modal&&<TxnModal type={modal} db={db} run={run} onClose={()=>setModal(null)}/>}
-    {showCal&&<Modal title="Sana yoki oraliq tanlash" onClose={()=>setShowCal(false)}>
-      <Field label="Dan"><input type="date" className={inputCls} value={cr.from} onChange={e=>setCR(r=>({...r,from:e.target.value}))}/></Field>
-      <Field label="Gacha (ixtiyoriy)"><input type="date" className={inputCls} value={cr.to} onChange={e=>setCR(r=>({...r,to:e.target.value}))}/></Field>
-      <button onClick={()=>{if(cr.from){setFilter("custom");setShowCal(false);}}} className="w-full bg-emerald-500 text-white py-3 rounded-xl font-semibold mt-1">Ko'rsatish</button>
-    </Modal>}
-  </div>;
+  const rLbl=filter!=="custom"||!cr.from?"Sana tanlash":((!cr.to||cr.to===cr.from)?new Date(cr.from).toLocaleDateString("ru-RU"):new Date(cr.from).toLocaleDateString("ru-RU")+" – "+new Date(cr.to).toLocaleDateString("ru-RU"));
+  const card=(title,cnt,val,color)=>h("div",{className:"bg-white rounded-2xl p-4 border"},h("div",{className:"flex items-center justify-between"},h("span",{className:color+" text-sm"},title),h("span",{className:"text-xs text-gray-400"},cnt+" ta")),h("div",{className:"text-xl font-bold text-gray-800 mt-1"},fmt(val)));
+  return h("div",{className:"p-4"},
+    h("div",{className:"flex items-center justify-between mb-4"},
+      h("h1",{className:"text-xl font-bold text-gray-800"},"Bosh sahifa"),
+      h("div",{className:"flex items-center gap-1 text-xs px-2 py-1 rounded-full "+(status==="online"?"bg-emerald-50 text-emerald-600":"bg-rose-50 text-rose-500")},status==="online"?IcWifi(13):IcWifiOff(13),status==="online"?"Sinxron":"Ulanmoqda")),
+    h("div",{className:"bg-gradient-to-br from-rose-500 to-pink-600 rounded-2xl p-5 text-white mb-3"},
+      h("div",{className:"flex items-center justify-between"},h("div",{className:"text-rose-100 text-sm"},"Umumiy nasiya (qarzdorlar)"),h("div",{className:"bg-white/20 rounded-full px-2.5 py-0.5 text-xs"},debtors.length+" ta")),
+      h("div",{className:"text-3xl font-bold mt-1"},fmt(totalDebt)+" ",h("span",{className:"text-lg font-normal"},"so'm"))),
+    h("div",{className:"grid grid-cols-2 gap-3 mb-4"},card("Bugungi nasiya",tdD.length,tdD.reduce((s,t)=>s+t.amount,0),"text-rose-500"),card("Bugungi to'lov",tdP.length,tdP.reduce((s,t)=>s+t.amount,0),"text-emerald-500")),
+    h("div",{className:"grid grid-cols-2 gap-3 mb-5"},
+      h("button",{onClick:()=>setModal("debt"),className:"bg-rose-500 text-white py-3 rounded-2xl font-semibold flex items-center justify-center gap-2"},IcPlus(18)," Nasiya qo'shish"),
+      h("button",{onClick:()=>setModal("pay"),className:"bg-emerald-500 text-white py-3 rounded-2xl font-semibold"},"To'lov qilish")),
+    h("div",{className:"flex gap-2 mb-3 flex-wrap"},
+      [["today","Bugun"],["week","Hafta"],["month","Oy"],["all","Hammasi"]].map(f=>h("button",{key:f[0],onClick:()=>setFilter(f[0]),className:"px-3 py-1.5 rounded-full text-sm "+(filter===f[0]?"bg-emerald-500 text-white":"bg-white border text-gray-600")},f[1])),
+      h("button",{onClick:()=>setShowCal(true),className:"px-3 py-1.5 rounded-full text-sm flex items-center gap-1 "+(filter==="custom"?"bg-emerald-500 text-white":"bg-white border text-gray-600")},IcCal(14)," "+rLbl)),
+    h("div",{className:"grid grid-cols-2 gap-3 mb-4 text-sm"},
+      h("div",{className:"bg-white rounded-xl p-3 border"},h("div",{className:"flex justify-between"},h("span",{className:"text-gray-500"},"Nasiya"),h("span",{className:"text-xs text-gray-400"},rD.length+" ta")),h("span",{className:"font-semibold text-rose-500"},fmt(rD.reduce((s,t)=>s+t.amount,0)))),
+      h("div",{className:"bg-white rounded-xl p-3 border"},h("div",{className:"flex justify-between"},h("span",{className:"text-gray-500"},"To'lov"),h("span",{className:"text-xs text-gray-400"},rP.length+" ta")),h("span",{className:"font-semibold text-emerald-500"},fmt(rP.reduce((s,t)=>s+t.amount,0))))),
+    h("h2",{className:"font-semibold text-gray-700 mb-2"},"So'nggi amallar"),
+    h("div",{className:"space-y-2"},
+      rng.slice(0,30).map(t=>h("div",{key:t.id,className:"bg-white rounded-xl p-3 border flex items-center justify-between"},
+        h("div",null,h("div",{className:"font-medium text-gray-800"},t.customer),h("div",{className:"text-xs text-gray-400"},fmtDate(t.date)+(t.note?" • "+t.note:""))),
+        h("div",{className:"font-semibold "+(t.type==="debt"?"text-rose-500":"text-emerald-500")},(t.type==="debt"?"−":"+")+fmt(t.amount)))),
+      rng.length===0&&h("div",{className:"text-center text-gray-400 py-6"},"Amal yo'q")),
+    modal&&h(TxnModal,{type:modal,db,run,onClose:()=>setModal(null)}),
+    showCal&&h(Modal,{title:"Sana yoki oraliq tanlash",onClose:()=>setShowCal(false)},
+      h(Field,{label:"Dan"},h("input",{type:"date",className:inputCls,value:cr.from,onChange:(e)=>setCR(Object.assign({},cr,{from:e.target.value}))})),
+      h(Field,{label:"Gacha (ixtiyoriy)"},h("input",{type:"date",className:inputCls,value:cr.to,onChange:(e)=>setCR(Object.assign({},cr,{to:e.target.value}))})),
+      h("button",{onClick:()=>{if(cr.from){setFilter("custom");setShowCal(false);}},className:"w-full bg-emerald-500 text-white py-3 rounded-xl font-semibold mt-1"},"Ko'rsatish")));
 }
 
-function TxnModal({type,db,run,onClose}){
+function TxnModal(props){
+  const type=props.type,db=props.db,run=props.run,onClose=props.onClose;
   const [picked,setPicked]=useState(null); const [amount,setAmount]=useState(""); const [note,setNote]=useState(""); const [op,setOp]=useState(null);
   const doSave=async(cust,amt)=>{let cid=cust.id;if(cust.__new){cid=uid();await sb.insert("customers",{id:cid,name:cust.name,phone:cust.phone,note:""});}await sb.insert("customer_txns",{id:uid(),customer_id:cid,type,amount:amt,note:note.trim(),date:now()});};
   const submit=()=>{const amt=parseInt(amount.replace(/\D/g,""),10);if(!picked||!amt)return;
-    if(type==="pay"){const c=picked.__new?{txns:[]}:db.customers.find(x=>x.id===picked.id);const debt=c?Math.abs(Math.min(0,customerBalance(c))):0;if(amt>debt){setOp({amt,debt,surplus:amt-debt});return;}}
+    if(type==="pay"){const c=picked.__new?{txns:[]}:db.customers.find(x=>x.id===picked.id);const debt=c?Math.abs(Math.min(0,cBal(c))):0;if(amt>debt){setOp({amt,debt,surplus:amt-debt});return;}}
     run(()=>doSave(picked,amt));onClose();};
-  if(op)return <Modal title="To'lov qarzdan oshyapti" onClose={()=>setOp(null)}>
-    <p className="text-gray-600 mb-2">Qarz: <b>{fmt(op.debt)}</b>, to'lov: <b>{fmt(op.amt)}</b>.</p>
-    <p className="text-gray-600 mb-4">Ortiqcha <b className="text-emerald-600">{fmt(op.surplus)}</b> so'mni <b>haqdor (+)</b> qilaylikmi?</p>
-    <div className="grid grid-cols-2 gap-3"><button onClick={()=>{run(()=>doSave(picked,op.debt));setOp(null);onClose();}} className="py-3 rounded-xl border text-gray-600 text-sm font-medium">Yo'q, qarzni yop</button><button onClick={()=>{run(()=>doSave(picked,op.amt));setOp(null);onClose();}} className="py-3 rounded-xl bg-emerald-500 text-white text-sm font-semibold">Ha, haqdor qil</button></div></Modal>;
-  return <Modal title={type==="debt"?"Nasiya qo'shish":"To'lov qilish"} onClose={onClose}>
-    <Field label="Mijoz"><CustomerPicker db={db} value={picked&&!picked.__new?db.customers.find(c=>c.id===picked.id):picked} onPick={setPicked}/></Field>
-    <Field label={type==="debt"?"Nasiya summasi":"To'lov summasi"}><input className={inputCls} inputMode="numeric" placeholder="0" value={amount?fmt(parseInt(amount.replace(/\D/g,""))||""):""} onChange={e=>setAmount(e.target.value)}/></Field>
-    <Field label="Izoh"><input className={inputCls} value={note} onChange={e=>setNote(e.target.value)} placeholder="ixtiyoriy"/></Field>
-    <button onClick={submit} className={"w-full py-3 rounded-xl text-white font-semibold "+(type==="debt"?"bg-rose-500":"bg-emerald-500")}>Saqlash</button></Modal>;
+  if(op) return h(Modal,{title:"To'lov qarzdan oshyapti",onClose:()=>setOp(null)},
+    h("p",{className:"text-gray-600 mb-2"},"Qarz: ",h("b",null,fmt(op.debt)),", to'lov: ",h("b",null,fmt(op.amt)),"."),
+    h("p",{className:"text-gray-600 mb-4"},"Ortiqcha ",h("b",{className:"text-emerald-600"},fmt(op.surplus))," so'mni haqdor (+) qilaylikmi?"),
+    h("div",{className:"grid grid-cols-2 gap-3"},
+      h("button",{onClick:()=>{run(()=>doSave(picked,op.debt));setOp(null);onClose();},className:"py-3 rounded-xl border text-gray-600 text-sm font-medium"},"Yo'q, qarzni yop"),
+      h("button",{onClick:()=>{run(()=>doSave(picked,op.amt));setOp(null);onClose();},className:"py-3 rounded-xl bg-emerald-500 text-white text-sm font-semibold"},"Ha, haqdor qil")));
+  return h(Modal,{title:type==="debt"?"Nasiya qo'shish":"To'lov qilish",onClose},
+    h(Field,{label:"Mijoz"},h(CustomerPicker,{db,value:picked&&!picked.__new?db.customers.find(c=>c.id===picked.id):picked,onPick:setPicked})),
+    h(Field,{label:type==="debt"?"Nasiya summasi":"To'lov summasi"},h("input",{className:inputCls,inputMode:"numeric",placeholder:"0",value:amount?fmt(parseInt(amount.replace(/\D/g,""))||""):"",onChange:(e)=>setAmount(e.target.value)})),
+    h(Field,{label:"Izoh"},h("input",{className:inputCls,value:note,onChange:(e)=>setNote(e.target.value),placeholder:"ixtiyoriy"})),
+    h("button",{onClick:submit,className:"w-full py-3 rounded-xl text-white font-semibold "+(type==="debt"?"bg-rose-500":"bg-emerald-500")},"Saqlash"));
 }
 
-function CustomersPage({db,run,open}){
+function CustomersPage(props){
+  const db=props.db,run=props.run,open=props.open;
   const [q,setQ]=useState(""); const [sort,setSort]=useState("all"); const [addOpen,setAddOpen]=useState(false);
-  let list=db.customers.map(c=>({...c,bal:customerBalance(c)}));
-  if(q.trim())list=list.filter(c=>c.name.toLowerCase().includes(q.toLowerCase())||(c.phone||"").includes(q));
+  let list=db.customers.map(c=>Object.assign({},c,{bal:cBal(c)}));
+  if(q.trim())list=list.filter(c=>c.name.toLowerCase().indexOf(q.toLowerCase())>=0||(c.phone||"").indexOf(q)>=0);
   if(sort==="debtors")list=list.filter(c=>c.bal<0);
-  if(sort==="most")list=[...list].sort((a,b)=>a.bal-b.bal);
-  if(sort==="least")list=[...list].sort((a,b)=>b.bal-a.bal);
-  return <div className="p-4">
-    <div className="flex items-center justify-between mb-3"><h1 className="text-xl font-bold text-gray-800">Mijozlar <span className="text-sm font-normal text-gray-400">({db.customers.length} ta)</span></h1>
-      <button onClick={()=>setAddOpen(true)} className="bg-emerald-500 text-white px-3 py-2 rounded-xl flex items-center gap-1 text-sm font-medium"><IcoPlus s={16}/> Yangi</button></div>
-    <div className="relative mb-3"><span className="absolute left-3 top-3 text-gray-400"><IcoSearch s={18}/></span><input className={inputCls+" pl-10"} placeholder="Qidirish (ism yoki nomer)" value={q} onChange={e=>setQ(e.target.value)}/></div>
-    <div className="flex gap-2 mb-2 overflow-x-auto">{[["all","Hammasi"],["debtors","Faqat qarzdorlar"],["most","Eng ko'p"],["least","Eng oz"]].map(([k,l])=><button key={k} onClick={()=>setSort(k)} className={"px-3 py-1.5 rounded-full text-sm whitespace-nowrap "+(sort===k?"bg-emerald-500 text-white":"bg-white border text-gray-600")}>{l}</button>)}</div>
-    <div className="text-sm text-gray-500 mb-2">Ko'rsatilyapti: <b>{list.length} ta</b></div>
-    <div className="space-y-2">{list.map(c=><button key={c.id} onClick={()=>open(c.id)} className="w-full bg-white rounded-xl p-3 border flex items-center justify-between text-left">
-      <div><div className="font-medium text-gray-800">{c.name}</div><div className="text-xs text-gray-400">{c.phone||"—"}{c.note?" • "+c.note:""}</div></div>
-      <div className={"font-semibold "+balColor(c.bal)}>{signed(c.bal)}</div></button>)}
-      {list.length===0&&<div className="text-center text-gray-400 py-8">Mijoz yo'q</div>}</div>
-    {addOpen&&<CustomerEditModal run={run} onClose={()=>setAddOpen(false)}/>}
-  </div>;
+  if(sort==="most")list=list.slice().sort((a,b)=>a.bal-b.bal);
+  if(sort==="least")list=list.slice().sort((a,b)=>b.bal-a.bal);
+  return h("div",{className:"p-4"},
+    h("div",{className:"flex items-center justify-between mb-3"},h("h1",{className:"text-xl font-bold text-gray-800"},"Mijozlar ",h("span",{className:"text-sm font-normal text-gray-400"},"("+db.customers.length+" ta)")),
+      h("button",{onClick:()=>setAddOpen(true),className:"bg-emerald-500 text-white px-3 py-2 rounded-xl flex items-center gap-1 text-sm font-medium"},IcPlus(16)," Yangi")),
+    h("div",{className:"relative mb-3"},h("span",{className:"absolute left-3 top-3 text-gray-400"},IcSearch(18)),h("input",{className:inputCls+" pl-10",placeholder:"Qidirish (ism yoki nomer)",value:q,onChange:(e)=>setQ(e.target.value)})),
+    h("div",{className:"flex gap-2 mb-2 overflow-x-auto"},[["all","Hammasi"],["debtors","Faqat qarzdorlar"],["most","Eng ko'p"],["least","Eng oz"]].map(s=>h("button",{key:s[0],onClick:()=>setSort(s[0]),className:"px-3 py-1.5 rounded-full text-sm whitespace-nowrap "+(sort===s[0]?"bg-emerald-500 text-white":"bg-white border text-gray-600")},s[1]))),
+    h("div",{className:"text-sm text-gray-500 mb-2"},"Ko'rsatilyapti: ",h("b",null,list.length+" ta")),
+    h("div",{className:"space-y-2"},list.map(c=>h("button",{key:c.id,onClick:()=>open(c.id),className:"w-full bg-white rounded-xl p-3 border flex items-center justify-between text-left"},
+      h("div",null,h("div",{className:"font-medium text-gray-800"},c.name),h("div",{className:"text-xs text-gray-400"},(c.phone||"—")+(c.note?" • "+c.note:""))),
+      h("div",{className:"font-semibold "+balColor(c.bal)},signed(c.bal)))),
+      list.length===0&&h("div",{className:"text-center text-gray-400 py-8"},"Mijoz yo'q")),
+    addOpen&&h(CustomerEditModal,{run,onClose:()=>setAddOpen(false)}));
 }
-function CustomerEditModal({run,onClose,existing}){
-  const [name,setName]=useState(existing?.name||""); const [phone,setPhone]=useState(existing?.phone||""); const [note,setNote]=useState(existing?.note||"");
-  const save=()=>{if(!name.trim())return;if(existing)run(()=>sb.update("customers",existing.id,{name:name.trim(),phone:phone.trim(),note:note.trim()}));else run(()=>sb.insert("customers",{id:uid(),name:name.trim(),phone:phone.trim(),note:note.trim()}));onClose();};
-  return <Modal title={existing?"Tahrirlash":"Yangi mijoz"} onClose={onClose}>
-    <Field label="Ism"><input className={inputCls} value={name} onChange={e=>setName(e.target.value)}/></Field>
-    <Field label="Telefon"><PhoneInput value={phone} onChange={setPhone}/></Field>
-    <Field label="Izoh"><input className={inputCls} value={note} onChange={e=>setNote(e.target.value)}/></Field>
-    <button onClick={save} className="w-full bg-emerald-500 text-white py-3 rounded-xl font-semibold">Saqlash</button></Modal>;
+function CustomerEditModal(props){
+  const ex=props.existing;
+  const [name,setName]=useState(ex?ex.name:""); const [phone,setPhone]=useState(ex?ex.phone:""); const [note,setNote]=useState(ex?ex.note:"");
+  const save=()=>{if(!name.trim())return;if(ex)props.run(()=>sb.update("customers",ex.id,{name:name.trim(),phone:phone.trim(),note:note.trim()}));else props.run(()=>sb.insert("customers",{id:uid(),name:name.trim(),phone:phone.trim(),note:note.trim()}));props.onClose();};
+  return h(Modal,{title:ex?"Tahrirlash":"Yangi mijoz",onClose:props.onClose},
+    h(Field,{label:"Ism"},h("input",{className:inputCls,value:name,onChange:(e)=>setName(e.target.value)})),
+    h(Field,{label:"Telefon"},h(PhoneInput,{value:phone,onChange:setPhone})),
+    h(Field,{label:"Izoh"},h("input",{className:inputCls,value:note,onChange:(e)=>setNote(e.target.value)})),
+    h("button",{onClick:save,className:"w-full bg-emerald-500 text-white py-3 rounded-xl font-semibold"},"Saqlash"));
 }
-function CustomerDetail({db,run,id,back}){
+function CustomerDetail(props){
+  const db=props.db,run=props.run,id=props.id,back=props.back;
   const c=db.customers.find(x=>x.id===id);
   const [modal,setModal]=useState(null); const [edit,setEdit]=useState(false); const [cf,setCf]=useState(null); const [op,setOp]=useState(null);
-  if(!c)return <div className="p-4"><button onClick={back} className="flex items-center gap-1 text-gray-500"><IcoBack s={18}/> Orqaga</button></div>;
-  const bal=customerBalance(c); const debt=Math.abs(Math.min(0,bal));
-  const txns=[...c.txns].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  if(!c) return h("div",{className:"p-4"},h("button",{onClick:back,className:"flex items-center gap-1 text-gray-500"},IcBack(18)," Orqaga"));
+  const bal=cBal(c),debt=Math.abs(Math.min(0,bal));
+  const txns=c.txns.slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
   const push=(t,a,n)=>run(()=>sb.insert("customer_txns",{id:uid(),customer_id:id,type:t,amount:a,note:n,date:now()}));
   const hSub=(t,a,n)=>{if(t==="pay"&&a>debt){setOp({amt:a,note:n,surplus:a-debt});return;}push(t,a,n);};
-  return <div className="p-4">
-    <button onClick={back} className="flex items-center gap-1 text-gray-500 mb-3"><IcoBack s={18}/> Orqaga</button>
-    <div className="bg-white rounded-2xl p-4 border mb-3">
-      <div className="flex items-start justify-between"><div>
-        <div className="text-lg font-bold text-gray-800">{c.name}</div>
-        {c.phone&&<a href={"tel:"+c.phone} className="text-emerald-600 text-sm flex items-center gap-1 mt-0.5"><IcoPhone s={14}/> {c.phone}</a>}
-        {c.note&&<div className="text-sm text-gray-400 mt-1">{c.note}</div>}</div>
-        <div className="flex gap-1"><button onClick={()=>setEdit(true)} className="p-2 text-gray-400"><IcoEdit s={18}/></button><button onClick={()=>setCf({type:"cust"})} className="p-2 text-rose-400"><IcoTrash s={18}/></button></div></div>
-      <div className="mt-3 pt-3 border-t"><span className="text-gray-500 text-sm">{bal<0?"Nasiya (qarzdor): ":bal>0?"Haqdor: ":"Balans: "}</span><span className={"text-xl font-bold "+balColor(bal)}>{signed(bal)} so'm</span></div></div>
-    <div className="grid grid-cols-2 gap-3 mb-4"><button onClick={()=>setModal("debt")} className="bg-rose-500 text-white py-2.5 rounded-xl font-medium">+ Qarz qo'shish</button><button onClick={()=>setModal("pay")} className="bg-emerald-500 text-white py-2.5 rounded-xl font-medium">To'lov qabul</button></div>
-    <h3 className="font-semibold text-gray-700 mb-2">Tarix</h3>
-    <div className="space-y-2">{txns.map(t=><div key={t.id} className="bg-white rounded-xl p-3 border flex items-center justify-between">
-      <div><div className="text-sm text-gray-600">{t.type==="debt"?"Nasiya":"To'lov"}</div><div className="text-xs text-gray-400">{fmtDate(t.date)}{t.note?" • "+t.note:""}</div></div>
-      <div className="flex items-center gap-2"><span className={"font-semibold "+(t.type==="debt"?"text-rose-500":"text-emerald-500")}>{t.type==="debt"?"−":"+"}{fmt(t.amount)}</span><button onClick={()=>setCf({type:"txn",tid:t.id})} className="text-gray-300"><IcoTrash s={16}/></button></div></div>)}
-      {txns.length===0&&<div className="text-center text-gray-400 py-6">Tarix yo'q</div>}</div>
-    {edit&&<CustomerEditModal run={run} existing={c} onClose={()=>setEdit(false)}/>}
-    {modal&&<AmountModal title={modal==="debt"?"Qarz qo'shish":"To'lov qabul qilish"} label={modal==="debt"?"Nasiya summasi":"To'lov summasi"} color={modal==="debt"?"rose":"emerald"} onSubmit={(a,n)=>hSub(modal,a,n)} onClose={()=>setModal(null)}/>}
-    {op&&<Modal title="To'lov qarzdan oshyapti" onClose={()=>setOp(null)}>
-      <p className="text-gray-600 mb-2">Qarz: <b>{fmt(debt)}</b>, to'lov: <b>{fmt(op.amt)}</b>.</p>
-      <p className="text-gray-600 mb-4">Ortiqcha <b className="text-emerald-600">{fmt(op.surplus)}</b> so'mni <b>haqdor (+)</b> qilaylikmi?</p>
-      <div className="grid grid-cols-2 gap-3"><button onClick={()=>{push("pay",debt,op.note);setOp(null);}} className="py-3 rounded-xl border text-gray-600 text-sm font-medium">Yo'q, qarzni yop</button><button onClick={()=>{push("pay",op.amt,op.note);setOp(null);}} className="py-3 rounded-xl bg-emerald-500 text-white text-sm font-semibold">Ha, haqdor qil</button></div></Modal>}
-    {cf&&<ConfirmModal title={cf.type==="cust"?"Mijozni o'chirish":"Amalni o'chirish"} message={cf.type==="cust"?`"${c.name}" butunlay o'chirilsinmi?`:"Bu amal o'chirilsinmi?"} onConfirm={()=>{if(cf.type==="cust"){run(()=>sb.remove("customers",id));back();}else push&&run(()=>sb.remove("customer_txns",cf.tid));}} onClose={()=>setCf(null)}/>}
-  </div>;
+  return h("div",{className:"p-4"},
+    h("button",{onClick:back,className:"flex items-center gap-1 text-gray-500 mb-3"},IcBack(18)," Orqaga"),
+    h("div",{className:"bg-white rounded-2xl p-4 border mb-3"},
+      h("div",{className:"flex items-start justify-between"},
+        h("div",null,h("div",{className:"text-lg font-bold text-gray-800"},c.name),
+          c.phone&&h("a",{href:"tel:"+c.phone,className:"text-emerald-600 text-sm flex items-center gap-1 mt-0.5"},IcPhone(14)," "+c.phone),
+          c.note&&h("div",{className:"text-sm text-gray-400 mt-1"},c.note)),
+        h("div",{className:"flex gap-1"},h("button",{onClick:()=>setEdit(true),className:"p-2 text-gray-400"},IcEdit(18)),h("button",{onClick:()=>setCf({type:"cust"}),className:"p-2 text-rose-400"},IcTrash(18)))),
+      h("div",{className:"mt-3 pt-3 border-t"},h("span",{className:"text-gray-500 text-sm"},bal<0?"Nasiya (qarzdor): ":bal>0?"Haqdor: ":"Balans: "),h("span",{className:"text-xl font-bold "+balColor(bal)},signed(bal)+" so'm"))),
+    h("div",{className:"grid grid-cols-2 gap-3 mb-4"},h("button",{onClick:()=>setModal("debt"),className:"bg-rose-500 text-white py-2.5 rounded-xl font-medium"},"+ Qarz qo'shish"),h("button",{onClick:()=>setModal("pay"),className:"bg-emerald-500 text-white py-2.5 rounded-xl font-medium"},"To'lov qabul")),
+    h("h3",{className:"font-semibold text-gray-700 mb-2"},"Tarix"),
+    h("div",{className:"space-y-2"},txns.map(t=>h("div",{key:t.id,className:"bg-white rounded-xl p-3 border flex items-center justify-between"},
+      h("div",null,h("div",{className:"text-sm text-gray-600"},t.type==="debt"?"Nasiya":"To'lov"),h("div",{className:"text-xs text-gray-400"},fmtDate(t.date)+(t.note?" • "+t.note:""))),
+      h("div",{className:"flex items-center gap-2"},h("span",{className:"font-semibold "+(t.type==="debt"?"text-rose-500":"text-emerald-500")},(t.type==="debt"?"−":"+")+fmt(t.amount)),h("button",{onClick:()=>setCf({type:"txn",tid:t.id}),className:"text-gray-300"},IcTrash(16))))),
+      txns.length===0&&h("div",{className:"text-center text-gray-400 py-6"},"Tarix yo'q")),
+    edit&&h(CustomerEditModal,{run,existing:c,onClose:()=>setEdit(false)}),
+    modal&&h(AmountModal,{title:modal==="debt"?"Qarz qo'shish":"To'lov qabul qilish",label:modal==="debt"?"Nasiya summasi":"To'lov summasi",color:modal==="debt"?"rose":"emerald",onSubmit:(a,n)=>hSub(modal,a,n),onClose:()=>setModal(null)}),
+    op&&h(Modal,{title:"To'lov qarzdan oshyapti",onClose:()=>setOp(null)},
+      h("p",{className:"text-gray-600 mb-2"},"Qarz: ",h("b",null,fmt(debt)),", to'lov: ",h("b",null,fmt(op.amt)),"."),
+      h("p",{className:"text-gray-600 mb-4"},"Ortiqcha ",h("b",{className:"text-emerald-600"},fmt(op.surplus))," so'mni haqdor (+) qilaylikmi?"),
+      h("div",{className:"grid grid-cols-2 gap-3"},h("button",{onClick:()=>{push("pay",debt,op.note);setOp(null);},className:"py-3 rounded-xl border text-gray-600 text-sm font-medium"},"Yo'q, qarzni yop"),h("button",{onClick:()=>{push("pay",op.amt,op.note);setOp(null);},className:"py-3 rounded-xl bg-emerald-500 text-white text-sm font-semibold"},"Ha, haqdor qil"))),
+    cf&&h(ConfirmModal,{title:cf.type==="cust"?"Mijozni o'chirish":"Amalni o'chirish",message:cf.type==="cust"?'"'+c.name+'" butunlay o\'chirilsinmi?':"Bu amal o'chirilsinmi?",onConfirm:()=>{if(cf.type==="cust"){run(()=>sb.remove("customers",id));back();}else run(()=>sb.remove("customer_txns",cf.tid));},onClose:()=>setCf(null)}));
 }
 
-function BakersPage({db,run,open}){
+function BakersPage(props){
+  const db=props.db,run=props.run,open=props.open;
   const [addOpen,setAddOpen]=useState(false); const [name,setName]=useState(""); const [phone,setPhone]=useState("");
-  const tot=b=>b.entries.reduce((s,e)=>s+e.count,0);
+  const tot=(b)=>b.entries.reduce((s,e)=>s+e.count,0);
   const save=()=>{if(!name.trim())return;run(()=>sb.insert("bakers",{id:uid(),name:name.trim(),phone:phone.trim()}));setName("");setPhone("");setAddOpen(false);};
-  return <div className="p-4">
-    <div className="flex items-center justify-between mb-3"><h1 className="text-xl font-bold text-gray-800">Nonvoylar <span className="text-sm font-normal text-gray-400">({db.bakers.length} ta)</span></h1>
-      <button onClick={()=>setAddOpen(true)} className="bg-emerald-500 text-white px-3 py-2 rounded-xl flex items-center gap-1 text-sm font-medium"><IcoPlus s={16}/> Yangi</button></div>
-    <div className="space-y-2">{db.bakers.map(b=><button key={b.id} onClick={()=>open(b.id)} className="w-full bg-white rounded-xl p-3 border flex items-center justify-between text-left">
-      <div><div className="font-medium text-gray-800">{b.name}</div><div className="text-xs text-gray-400">{b.phone||"—"}</div></div>
-      <div className="text-right"><div className="font-semibold text-amber-600">{fmt(tot(b))}</div><div className="text-xs text-gray-400">jami non</div></div></button>)}
-      {db.bakers.length===0&&<div className="text-center text-gray-400 py-8">Nonvoy yo'q</div>}</div>
-    {addOpen&&<Modal title="Yangi nonvoy" onClose={()=>setAddOpen(false)}>
-      <Field label="Nom"><input className={inputCls} value={name} onChange={e=>setName(e.target.value)}/></Field>
-      <Field label="Telefon"><PhoneInput value={phone} onChange={setPhone}/></Field>
-      <button onClick={save} className="w-full bg-emerald-500 text-white py-3 rounded-xl font-semibold">Saqlash</button></Modal>}
-  </div>;
+  return h("div",{className:"p-4"},
+    h("div",{className:"flex items-center justify-between mb-3"},h("h1",{className:"text-xl font-bold text-gray-800"},"Nonvoylar ",h("span",{className:"text-sm font-normal text-gray-400"},"("+db.bakers.length+" ta)")),
+      h("button",{onClick:()=>setAddOpen(true),className:"bg-emerald-500 text-white px-3 py-2 rounded-xl flex items-center gap-1 text-sm font-medium"},IcPlus(16)," Yangi")),
+    h("div",{className:"space-y-2"},db.bakers.map(b=>h("button",{key:b.id,onClick:()=>open(b.id),className:"w-full bg-white rounded-xl p-3 border flex items-center justify-between text-left"},
+      h("div",null,h("div",{className:"font-medium text-gray-800"},b.name),h("div",{className:"text-xs text-gray-400"},b.phone||"—")),
+      h("div",{className:"text-right"},h("div",{className:"font-semibold text-amber-600"},fmt(tot(b))),h("div",{className:"text-xs text-gray-400"},"jami non")))),
+      db.bakers.length===0&&h("div",{className:"text-center text-gray-400 py-8"},"Nonvoy yo'q")),
+    addOpen&&h(Modal,{title:"Yangi nonvoy",onClose:()=>setAddOpen(false)},
+      h(Field,{label:"Nom"},h("input",{className:inputCls,value:name,onChange:(e)=>setName(e.target.value)})),
+      h(Field,{label:"Telefon"},h(PhoneInput,{value:phone,onChange:setPhone})),
+      h("button",{onClick:save,className:"w-full bg-emerald-500 text-white py-3 rounded-xl font-semibold"},"Saqlash")));
 }
-function BakerDetail({db,run,id,back}){
+function BakerDetail(props){
+  const db=props.db,run=props.run,id=props.id,back=props.back;
   const b=db.bakers.find(x=>x.id===id); const [count,setCount]=useState(""); const [cf,setCf]=useState(null);
-  if(!b)return <div className="p-4"><button onClick={back} className="flex items-center gap-1 text-gray-500"><IcoBack s={18}/> Orqaga</button></div>;
-  const entries=[...b.entries].sort((a,e)=>new Date(e.date)-new Date(a.date));
+  if(!b) return h("div",{className:"p-4"},h("button",{onClick:back,className:"flex items-center gap-1 text-gray-500"},IcBack(18)," Orqaga"));
+  const entries=b.entries.slice().sort((a,e)=>new Date(e.date)-new Date(a.date));
   const tot=b.entries.reduce((s,e)=>s+e.count,0);
   const td=b.entries.filter(e=>isSameDay(e.date,now())).reduce((s,e)=>s+e.count,0);
   const wk=b.entries.filter(e=>(new Date()-new Date(e.date))/864e5<=7).reduce((s,e)=>s+e.count,0);
   const n=new Date(); const mo=b.entries.filter(e=>{const d=new Date(e.date);return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear();}).reduce((s,e)=>s+e.count,0);
   const add=()=>{const c=parseInt(count,10);if(!c)return;run(()=>sb.insert("baker_entries",{id:uid(),baker_id:id,count:c,date:now()}));setCount("");};
-  return <div className="p-4">
-    <button onClick={back} className="flex items-center gap-1 text-gray-500 mb-3"><IcoBack s={18}/> Orqaga</button>
-    <div className="bg-white rounded-2xl p-4 border mb-3 flex items-start justify-between">
-      <div><div className="text-lg font-bold text-gray-800">{b.name}</div>{b.phone&&<a href={"tel:"+b.phone} className="text-emerald-600 text-sm flex items-center gap-1"><IcoPhone s={14}/> {b.phone}</a>}</div>
-      <button onClick={()=>setCf({type:"baker"})} className="p-2 text-rose-400"><IcoTrash s={18}/></button></div>
-    <div className="grid grid-cols-2 gap-2 mb-3"><div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center"><div className="text-xs text-amber-700">Bugun</div><div className="font-bold text-amber-700 text-lg">{fmt(td)} ta</div></div>
-      <div className="bg-white rounded-xl p-3 border text-center"><div className="text-xs text-gray-400">Jami</div><div className="font-bold text-amber-600 text-lg">{fmt(tot)}</div></div></div>
-    <div className="grid grid-cols-2 gap-2 mb-4"><div className="bg-white rounded-xl p-3 border text-center"><div className="text-xs text-gray-400">Hafta</div><div className="font-bold text-amber-600">{fmt(wk)}</div></div>
-      <div className="bg-white rounded-xl p-3 border text-center"><div className="text-xs text-gray-400">Oy</div><div className="font-bold text-amber-600">{fmt(mo)}</div></div></div>
-    <div className="flex gap-2 mb-4"><input className={inputCls} inputMode="numeric" placeholder="Bugungi non soni" value={count} onChange={e=>setCount(e.target.value.replace(/\D/g,""))}/><button onClick={add} className="bg-amber-500 text-white px-5 rounded-xl font-medium whitespace-nowrap">Qo'shish</button></div>
-    <h3 className="font-semibold text-gray-700 mb-2">Kunlik kirimlar</h3>
-    <div className="space-y-2">{entries.map(e=><div key={e.id} className="bg-white rounded-xl p-3 border flex items-center justify-between">
-      <div className="text-sm text-gray-600">{fmtDate(e.date)}</div><div className="flex items-center gap-2"><span className="font-semibold text-amber-600">{fmt(e.count)} ta</span><button onClick={()=>setCf({type:"entry",eid:e.id})} className="text-gray-300"><IcoTrash s={16}/></button></div></div>)}
-      {entries.length===0&&<div className="text-center text-gray-400 py-6">Kirim yo'q</div>}</div>
-    {cf&&<ConfirmModal title={cf.type==="baker"?"Nonvoyni o'chirish":"Kirimni o'chirish"} message={cf.type==="baker"?`"${b.name}" o'chirilsinmi?`:"Bu kirim o'chirilsinmi?"} onConfirm={()=>{if(cf.type==="baker"){run(()=>sb.remove("bakers",id));back();}else run(()=>sb.remove("baker_entries",cf.eid));}} onClose={()=>setCf(null)}/>}
-  </div>;
+  const stat=(lbl,val,hl)=>h("div",{className:(hl?"bg-amber-50 border-amber-200":"bg-white")+" border rounded-xl p-3 text-center"},h("div",{className:"text-xs "+(hl?"text-amber-700":"text-gray-400")},lbl),h("div",{className:"font-bold "+(hl?"text-amber-700":"text-amber-600")+" text-lg"},fmt(val)+(hl?" ta":"")));
+  return h("div",{className:"p-4"},
+    h("button",{onClick:back,className:"flex items-center gap-1 text-gray-500 mb-3"},IcBack(18)," Orqaga"),
+    h("div",{className:"bg-white rounded-2xl p-4 border mb-3 flex items-start justify-between"},
+      h("div",null,h("div",{className:"text-lg font-bold text-gray-800"},b.name),b.phone&&h("a",{href:"tel:"+b.phone,className:"text-emerald-600 text-sm flex items-center gap-1"},IcPhone(14)," "+b.phone)),
+      h("button",{onClick:()=>setCf({type:"baker"}),className:"p-2 text-rose-400"},IcTrash(18))),
+    h("div",{className:"grid grid-cols-2 gap-2 mb-3"},stat("Bugun",td,true),stat("Jami",tot,false)),
+    h("div",{className:"grid grid-cols-2 gap-2 mb-4"},stat("Hafta",wk,false),stat("Oy",mo,false)),
+    h("div",{className:"flex gap-2 mb-4"},h("input",{className:inputCls,inputMode:"numeric",placeholder:"Bugungi non soni",value:count,onChange:(e)=>setCount(e.target.value.replace(/\D/g,""))}),h("button",{onClick:add,className:"bg-amber-500 text-white px-5 rounded-xl font-medium whitespace-nowrap"},"Qo'shish")),
+    h("h3",{className:"font-semibold text-gray-700 mb-2"},"Kunlik kirimlar"),
+    h("div",{className:"space-y-2"},entries.map(e=>h("div",{key:e.id,className:"bg-white rounded-xl p-3 border flex items-center justify-between"},
+      h("div",{className:"text-sm text-gray-600"},fmtDate(e.date)),h("div",{className:"flex items-center gap-2"},h("span",{className:"font-semibold text-amber-600"},fmt(e.count)+" ta"),h("button",{onClick:()=>setCf({type:"entry",eid:e.id}),className:"text-gray-300"},IcTrash(16))))),
+      entries.length===0&&h("div",{className:"text-center text-gray-400 py-6"},"Kirim yo'q")),
+    cf&&h(ConfirmModal,{title:cf.type==="baker"?"Nonvoyni o'chirish":"Kirimni o'chirish",message:cf.type==="baker"?'"'+b.name+'" o\'chirilsinmi?':"Bu kirim o'chirilsinmi?",onConfirm:()=>{if(cf.type==="baker"){run(()=>sb.remove("bakers",id));back();}else run(()=>sb.remove("baker_entries",cf.eid));},onClose:()=>setCf(null)}));
 }
 
-function PartnersPage({db,run,open}){
+function PartnersPage(props){
+  const db=props.db,run=props.run,open=props.open;
   const [addOpen,setAddOpen]=useState(false); const [name,setName]=useState(""); const [phone,setPhone]=useState("");
   const save=()=>{if(!name.trim())return;run(()=>sb.insert("partners",{id:uid(),name:name.trim(),phone:phone.trim()}));setName("");setPhone("");setAddOpen(false);};
-  const owed=db.partners.reduce((s,p)=>s+partnerBalance(p),0);
-  return <div className="p-4">
-    <div className="flex items-center justify-between mb-3"><h1 className="text-xl font-bold text-gray-800">Hamkorlar <span className="text-sm font-normal text-gray-400">({db.partners.length} ta)</span></h1>
-      <button onClick={()=>setAddOpen(true)} className="bg-emerald-500 text-white px-3 py-2 rounded-xl flex items-center gap-1 text-sm font-medium"><IcoPlus s={16}/> Yangi</button></div>
-    <div className="bg-gradient-to-br from-indigo-500 to-blue-600 rounded-2xl p-4 text-white mb-4"><div className="text-blue-100 text-sm">Hamkorlarga jami qarzim</div><div className="text-2xl font-bold mt-1">{fmt(owed)} so'm</div></div>
-    <div className="space-y-2">{db.partners.map(p=>{const bal=partnerBalance(p);return <button key={p.id} onClick={()=>open(p.id)} className="w-full bg-white rounded-xl p-3 border flex items-center justify-between text-left">
-      <div><div className="font-medium text-gray-800">{p.name}</div><div className="text-xs text-gray-400">{p.phone||"—"}</div></div>
-      <div className={"font-semibold "+(bal>0?"text-indigo-600":"text-gray-400")}>{fmt(bal)}</div></button>;})}
-      {db.partners.length===0&&<div className="text-center text-gray-400 py-8">Hamkor yo'q</div>}</div>
-    {addOpen&&<Modal title="Yangi hamkor" onClose={()=>setAddOpen(false)}>
-      <Field label="Nom"><input className={inputCls} value={name} onChange={e=>setName(e.target.value)}/></Field>
-      <Field label="Telefon"><PhoneInput value={phone} onChange={setPhone}/></Field>
-      <button onClick={save} className="w-full bg-emerald-500 text-white py-3 rounded-xl font-semibold">Saqlash</button></Modal>}
-  </div>;
+  const owed=db.partners.reduce((s,p)=>s+pBal(p),0);
+  return h("div",{className:"p-4"},
+    h("div",{className:"flex items-center justify-between mb-3"},h("h1",{className:"text-xl font-bold text-gray-800"},"Hamkorlar ",h("span",{className:"text-sm font-normal text-gray-400"},"("+db.partners.length+" ta)")),
+      h("button",{onClick:()=>setAddOpen(true),className:"bg-emerald-500 text-white px-3 py-2 rounded-xl flex items-center gap-1 text-sm font-medium"},IcPlus(16)," Yangi")),
+    h("div",{className:"bg-gradient-to-br from-indigo-500 to-blue-600 rounded-2xl p-4 text-white mb-4"},h("div",{className:"text-blue-100 text-sm"},"Hamkorlarga jami qarzim"),h("div",{className:"text-2xl font-bold mt-1"},fmt(owed)+" so'm")),
+    h("div",{className:"space-y-2"},db.partners.map(p=>{const bal=pBal(p);return h("button",{key:p.id,onClick:()=>open(p.id),className:"w-full bg-white rounded-xl p-3 border flex items-center justify-between text-left"},
+      h("div",null,h("div",{className:"font-medium text-gray-800"},p.name),h("div",{className:"text-xs text-gray-400"},p.phone||"—")),
+      h("div",{className:"font-semibold "+(bal>0?"text-indigo-600":"text-gray-400")},fmt(bal)));}),
+      db.partners.length===0&&h("div",{className:"text-center text-gray-400 py-8"},"Hamkor yo'q")),
+    addOpen&&h(Modal,{title:"Yangi hamkor",onClose:()=>setAddOpen(false)},
+      h(Field,{label:"Nom"},h("input",{className:inputCls,value:name,onChange:(e)=>setName(e.target.value)})),
+      h(Field,{label:"Telefon"},h(PhoneInput,{value:phone,onChange:setPhone})),
+      h("button",{onClick:save,className:"w-full bg-emerald-500 text-white py-3 rounded-xl font-semibold"},"Saqlash")));
 }
-function PartnerDetail({db,run,id,back}){
+function PartnerDetail(props){
+  const db=props.db,run=props.run,id=props.id,back=props.back;
   const p=db.partners.find(x=>x.id===id); const [modal,setModal]=useState(null); const [cf,setCf]=useState(null);
-  if(!p)return <div className="p-4"><button onClick={back} className="flex items-center gap-1 text-gray-500"><IcoBack s={18}/> Orqaga</button></div>;
-  const bal=partnerBalance(p); const txns=[...p.txns].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  if(!p) return h("div",{className:"p-4"},h("button",{onClick:back,className:"flex items-center gap-1 text-gray-500"},IcBack(18)," Orqaga"));
+  const bal=pBal(p); const txns=p.txns.slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
   const add=(t,a,n)=>run(()=>sb.insert("partner_txns",{id:uid(),partner_id:id,type:t,amount:a,note:n,date:now()}));
-  return <div className="p-4">
-    <button onClick={back} className="flex items-center gap-1 text-gray-500 mb-3"><IcoBack s={18}/> Orqaga</button>
-    <div className="bg-white rounded-2xl p-4 border mb-3 flex items-start justify-between">
-      <div><div className="text-lg font-bold text-gray-800">{p.name}</div>{p.phone&&<a href={"tel:"+p.phone} className="text-emerald-600 text-sm flex items-center gap-1"><IcoPhone s={14}/> {p.phone}</a>}
-        <div className="mt-2"><span className="text-gray-500 text-sm">Qarzim: </span><span className={"font-bold "+(bal>0?"text-indigo-600":"text-emerald-500")}>{fmt(bal)} so'm</span></div></div>
-      <button onClick={()=>setCf({type:"partner"})} className="p-2 text-rose-400"><IcoTrash s={18}/></button></div>
-    <div className="grid grid-cols-2 gap-3 mb-4"><button onClick={()=>setModal("buy")} className="bg-indigo-500 text-white py-2.5 rounded-xl font-medium">+ Nasiya qo'shish</button><button onClick={()=>setModal("pay")} className="bg-emerald-500 text-white py-2.5 rounded-xl font-medium">To'lov qilish</button></div>
-    <h3 className="font-semibold text-gray-700 mb-2">Tarix</h3>
-    <div className="space-y-2">{txns.map(t=><div key={t.id} className="bg-white rounded-xl p-3 border flex items-center justify-between">
-      <div><div className="text-sm text-gray-600">{t.type==="buy"?"Nasiya (mol olindi)":"To'lov qilindi"}</div><div className="text-xs text-gray-400">{fmtDate(t.date)}{t.note?" • "+t.note:""}</div></div>
-      <div className="flex items-center gap-2"><span className={"font-semibold "+(t.type==="buy"?"text-indigo-600":"text-emerald-500")}>{t.type==="buy"?"+":"−"}{fmt(t.amount)}</span><button onClick={()=>setCf({type:"txn",tid:t.id})} className="text-gray-300"><IcoTrash s={16}/></button></div></div>)}
-      {txns.length===0&&<div className="text-center text-gray-400 py-6">Tarix yo'q</div>}</div>
-    {modal&&<AmountModal title={modal==="buy"?"Nasiya qo'shish":"To'lov qilish"} label={modal==="buy"?"Nasiya summasi (qarz oshadi)":"To'lov summasi (qarz kamayadi)"} color={modal==="buy"?"indigo":"emerald"} onSubmit={(a,n)=>add(modal,a,n)} onClose={()=>setModal(null)}/>}
-    {cf&&<ConfirmModal title={cf.type==="partner"?"Hamkorni o'chirish":"Amalni o'chirish"} message={cf.type==="partner"?`"${p.name}" o'chirilsinmi?`:"Bu amal o'chirilsinmi?"} onConfirm={()=>{if(cf.type==="partner"){run(()=>sb.remove("partners",id));back();}else run(()=>sb.remove("partner_txns",cf.tid));}} onClose={()=>setCf(null)}/>}
-  </div>;
+  return h("div",{className:"p-4"},
+    h("button",{onClick:back,className:"flex items-center gap-1 text-gray-500 mb-3"},IcBack(18)," Orqaga"),
+    h("div",{className:"bg-white rounded-2xl p-4 border mb-3 flex items-start justify-between"},
+      h("div",null,h("div",{className:"text-lg font-bold text-gray-800"},p.name),p.phone&&h("a",{href:"tel:"+p.phone,className:"text-emerald-600 text-sm flex items-center gap-1"},IcPhone(14)," "+p.phone),
+        h("div",{className:"mt-2"},h("span",{className:"text-gray-500 text-sm"},"Qarzim: "),h("span",{className:"font-bold "+(bal>0?"text-indigo-600":"text-emerald-500")},fmt(bal)+" so'm"))),
+      h("button",{onClick:()=>setCf({type:"partner"}),className:"p-2 text-rose-400"},IcTrash(18))),
+    h("div",{className:"grid grid-cols-2 gap-3 mb-4"},h("button",{onClick:()=>setModal("buy"),className:"bg-indigo-500 text-white py-2.5 rounded-xl font-medium"},"+ Nasiya qo'shish"),h("button",{onClick:()=>setModal("pay"),className:"bg-emerald-500 text-white py-2.5 rounded-xl font-medium"},"To'lov qilish")),
+    h("h3",{className:"font-semibold text-gray-700 mb-2"},"Tarix"),
+    h("div",{className:"space-y-2"},txns.map(t=>h("div",{key:t.id,className:"bg-white rounded-xl p-3 border flex items-center justify-between"},
+      h("div",null,h("div",{className:"text-sm text-gray-600"},t.type==="buy"?"Nasiya (mol olindi)":"To'lov qilindi"),h("div",{className:"text-xs text-gray-400"},fmtDate(t.date)+(t.note?" • "+t.note:""))),
+      h("div",{className:"flex items-center gap-2"},h("span",{className:"font-semibold "+(t.type==="buy"?"text-indigo-600":"text-emerald-500")},(t.type==="buy"?"+":"−")+fmt(t.amount)),h("button",{onClick:()=>setCf({type:"txn",tid:t.id}),className:"text-gray-300"},IcTrash(16))))),
+      txns.length===0&&h("div",{className:"text-center text-gray-400 py-6"},"Tarix yo'q")),
+    modal&&h(AmountModal,{title:modal==="buy"?"Nasiya qo'shish":"To'lov qilish",label:modal==="buy"?"Nasiya summasi (qarz oshadi)":"To'lov summasi (qarz kamayadi)",color:modal==="buy"?"indigo":"emerald",onSubmit:(a,n)=>add(modal,a,n),onClose:()=>setModal(null)}),
+    cf&&h(ConfirmModal,{title:cf.type==="partner"?"Hamkorni o'chirish":"Amalni o'chirish",message:cf.type==="partner"?'"'+p.name+'" o\'chirilsinmi?':"Bu amal o'chirilsinmi?",onConfirm:()=>{if(cf.type==="partner"){run(()=>sb.remove("partners",id));back();}else run(()=>sb.remove("partner_txns",cf.tid));},onClose:()=>setCf(null)}));
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+ReactDOM.createRoot(document.getElementById("root")).render(h(App));
 </script>
 </body>
 </html>
