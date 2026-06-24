@@ -20,6 +20,8 @@ const h = createElement;
 const SUPABASE_URL = "https://zdnaphtdzfmoxhptnqyd.supabase.co";
 // ⚠️ Supabase > Settings > API > "anon public" kalitini shu yerga qo'y (tirnoq ichiga):
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpkbmFwaHRkemZtb3hocHRucXlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNDM4MzgsImV4cCI6MjA5NzcxOTgzOH0.AQITLZJf4-txQDeW7Myn-LvEBaqSMZS5pSdHOYzhgf0";
+// ⚠️ Appga kirish paroli — buni o'zgartir (faqat sen va xodiming biladi):
+const APP_PASSWORD = "market2026";
 const HDR = { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY, "Content-Type": "application/json" };
 const sb = {
   select: async (t) => { const r = await fetch(SUPABASE_URL+"/rest/v1/"+t+"?select=*",{headers:HDR}); if(!r.ok) throw new Error(await r.text()); return r.json(); },
@@ -70,11 +72,13 @@ const IcWifiOff=(s)=>Svg(["M1 1l22 22","M16.72 11.06A10.94 10.94 0 0 1 19 12.55"
 
 // ===== UI helpers =====
 function Modal(props){
-  return h("div",{className:"fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40",onClick:props.onClose},
-    h("div",{className:"bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl max-h-[92vh] overflow-y-auto",onClick:(e)=>e.stopPropagation()},
+  // Faqat orqa fonning o'ziga bosilganda yopiladi (ichki bosishlar tarqalmaydi)
+  const onBg=(e)=>{ if(e.target===e.currentTarget) props.onClose(); };
+  return h("div",{className:"fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40",onClick:onBg},
+    h("div",{className:"bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl max-h-[92vh] overflow-y-auto"},
       h("div",{className:"flex items-center justify-between px-4 py-3 border-b sticky top-0 bg-white"},
         h("h3",{className:"font-semibold text-gray-800"},props.title),
-        h("button",{onClick:props.onClose,className:"p-1 text-gray-400"},IcX(22))),
+        h("button",{onClick:props.onClose,className:"p-2 -m-1 text-gray-400"},IcX(22))),
       h("div",{className:"p-4"},props.children)));
 }
 function Field(props){ return h("label",{className:"block mb-3"},h("span",{className:"text-sm text-gray-600 mb-1 block"},props.label),props.children); }
@@ -116,13 +120,31 @@ function CustomerPicker(props){
       h("button",{onClick:()=>{if(nn.trim())onPick({__new:true,name:nn.trim(),phone:np.trim()});},className:"w-full bg-emerald-500 text-white py-2 rounded-xl font-medium"},"Qo'shish va tanlash")));
 }
 
+// ===== Login ekrani =====
+function Login(props){
+  const [pw,setPw]=useState(""); const [err,setErr]=useState(false);
+  const submit=()=>{ if(pw===APP_PASSWORD){ try{localStorage.setItem("mm_auth","ok");}catch(e){} props.onOk(); } else { setErr(true); } };
+  return h("div",{className:"min-h-screen flex items-center justify-center p-6 bg-gray-50"},
+    h("div",{className:"w-full max-w-xs"},
+      h("div",{className:"text-center mb-6"},
+        h("div",{className:"text-2xl font-bold text-gray-800"},"Mini Market"),
+        h("div",{className:"text-sm text-gray-500 mt-1"},"Kirish uchun parol kiriting")),
+      h("input",{className:inputCls+" mb-2",type:"password",placeholder:"Parol",value:pw,
+        onChange:(e)=>{setPw(e.target.value);setErr(false);},
+        onKeyDown:(e)=>{if(e.key==="Enter")submit();},autoFocus:true}),
+      err&&h("div",{className:"text-rose-500 text-sm mb-2 text-center"},"Parol noto'g'ri"),
+      h("button",{onClick:submit,className:"w-full bg-emerald-500 text-white py-3 rounded-xl font-semibold mt-1"},"Kirish")));
+}
+
 // ===== App =====
 function App(){
+  const [authed,setAuthed]=useState(()=>{ try{return localStorage.getItem("mm_auth")==="ok";}catch(e){return false;} });
   const [db,setDb]=useState(null); const [tab,setTab]=useState("home"); const [view,setView]=useState({page:null,id:null});
   const [status,setStatus]=useState("loading"); const [errMsg,setErrMsg]=useState(""); const pollRef=useRef(null);
   const reload=async()=>{try{const d=await fetchDB();setDb(d);setStatus("online");}catch(e){setStatus("error");setErrMsg(String(e.message||e));}};
-  useEffect(()=>{reload();pollRef.current=setInterval(reload,4000);return()=>clearInterval(pollRef.current);},[]);
+  useEffect(()=>{ if(!authed)return; reload();pollRef.current=setInterval(reload,4000);return()=>clearInterval(pollRef.current); },[authed]);
   const run=async(fn)=>{try{await fn();await reload();}catch(e){setStatus("error");setErrMsg(String(e.message||e));alert("Xatolik: "+(e.message||e));}};
+  if(!authed) return h(Login,{onOk:()=>setAuthed(true)});
   if(status==="loading"&&!db) return h("div",{className:"p-8 text-center text-gray-400"},"Yuklanmoqda...");
   if(status==="error"&&!db) return h("div",{className:"p-8 text-center"},
     h("div",{className:"text-rose-400 mb-3 flex justify-center"},IcWifiOff(40)),
@@ -161,7 +183,9 @@ function HomePage(props){
   return h("div",{className:"p-4"},
     h("div",{className:"flex items-center justify-between mb-4"},
       h("h1",{className:"text-xl font-bold text-gray-800"},"Bosh sahifa"),
-      h("div",{className:"flex items-center gap-1 text-xs px-2 py-1 rounded-full "+(status==="online"?"bg-emerald-50 text-emerald-600":"bg-rose-50 text-rose-500")},status==="online"?IcWifi(13):IcWifiOff(13),status==="online"?"Sinxron":"Ulanmoqda")),
+      h("div",{className:"flex items-center gap-2"},
+        h("div",{className:"flex items-center gap-1 text-xs px-2 py-1 rounded-full "+(status==="online"?"bg-emerald-50 text-emerald-600":"bg-rose-50 text-rose-500")},status==="online"?IcWifi(13):IcWifiOff(13),status==="online"?"Sinxron":"Ulanmoqda"),
+        h("button",{onClick:()=>{try{localStorage.removeItem("mm_auth");}catch(e){} location.reload();},className:"text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-500"},"Chiqish"))),
     h("div",{className:"bg-gradient-to-br from-rose-500 to-pink-600 rounded-2xl p-5 text-white mb-3"},
       h("div",{className:"flex items-center justify-between"},h("div",{className:"text-rose-100 text-sm"},"Umumiy nasiya (qarzdorlar)"),h("div",{className:"bg-white/20 rounded-full px-2.5 py-0.5 text-xs"},debtors.length+" ta")),
       h("div",{className:"text-3xl font-bold mt-1"},fmt(totalDebt)+" ",h("span",{className:"text-lg font-normal"},"so'm"))),
