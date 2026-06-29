@@ -294,7 +294,7 @@ function CustomerDetail(props){
       h("p",{className:"text-gray-600 mb-2"},"Qarz: ",h("b",null,fmt(debt)),", to'lov: ",h("b",null,fmt(op.amt)),"."),
       h("p",{className:"text-gray-600 mb-4"},"Ortiqcha ",h("b",{className:"text-emerald-600"},fmt(op.surplus))," so'mni haqdor (+) qilaylikmi?"),
       h("div",{className:"grid grid-cols-2 gap-3"},h("button",{onClick:()=>{push("pay",debt,op.note);setOp(null);},className:"py-3 rounded-xl border text-gray-600 text-sm font-medium"},"Yo'q, qarzni yop"),h("button",{onClick:()=>{push("pay",op.amt,op.note);setOp(null);},className:"py-3 rounded-xl bg-emerald-500 text-white text-sm font-semibold"},"Ha, haqdor qil"))),
-    cf&&h(ConfirmModal,{title:cf.type==="cust"?"Mijozni o'chirish":"Amalni o'chirish",message:cf.type==="cust"?'"'+c.name+'" butunlay o\'chirilsinmi?':"Bu amal o'chirilsinmi?",onConfirm:()=>{if(cf.type==="cust"){run(()=>sb.remove("customers",id));back();}else run(()=>sb.remove("customer_txns",cf.tid));},onClose:()=>setCf(null)}));
+    cf&&h(ConfirmModal,{title:"Amalni o'chirish",message:"Bu amal o'chirilsinmi? (tarixda iz qoladi, lekin balansdan chiqadi)",onConfirm:()=>delTxn(cf.tid),onClose:()=>setCf(null)}));
 }
 
 // ===== CHIQIMLAR / KASSA =====
