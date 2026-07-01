@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Smart Market</title>
+<title>Mini Market</title>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -240,7 +240,11 @@ function TxnModal(props){
   const okMsg=type==="debt"?"Nasiya qo'shildi":"To'lov qabul qilindi";
   // pickerValue: CustomerPicker'ga uzatiladigan obyekt (doim yangi db'dan)
   const pickerValue = !pick ? null : (pick.__new ? pick : db.customers.find(c=>c.id===pick.existingId) || null);
-  const onPick=(c)=>{ if(!c){setPick(null);return;} if(c.__new){setPick(c);} else {setPick({existingId:c.id});} };
+  const onPick=(c)=>{
+    if(!c){ setPick(null); return; }
+    if(c.__new){ setPick({__new:true,name:c.name,phone:c.phone}); }
+    else { setPick({existingId:c.id}); }
+  };
   const doSave=async(amt)=>{
     let cid;
     if(pick.__new){ cid=uid(); await sb.insert("customers",{id:cid,name:pick.name,phone:pick.phone,note:""}); }
