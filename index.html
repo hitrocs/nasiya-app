@@ -126,8 +126,8 @@ function CustomerPicker(props){
         h("div",null,h("div",{className:"font-medium text-gray-800"},value.name),h("div",{className:"text-xs text-gray-500"},value.phone)),
         h("button",{onClick:()=>onPick(null),className:"text-gray-400 p-1"},IcX(18))),
       isExisting && h("div",{className:"text-sm mt-1.5 pt-1.5 border-t border-emerald-200"},
-        "Mavjud qarz: ",
-        h("span",{className:"font-semibold "+balColor(b)}, b<0?"- "+fmt(Math.abs(b))+" so'm" : b>0?"+ "+fmt(b)+" so'm" : "Qarz yo'q")));
+        "Hozirgi holat: ",
+        h("span",{className:"font-semibold "+balColor(b)}, b<0?"Nasiya "+fmt(Math.abs(b))+" so'm" : b>0?"Haqdor "+fmt(b)+" so'm" : "Qarz yo'q")));
   }
   return h("div",null,
     h("input",{className:inputCls,placeholder:"Mijoz ismini yozing...",value:q,onChange:(e)=>{setQ(e.target.value);setAdding(false);}}),
@@ -234,39 +234,33 @@ function HomePage(props){
 // Bosh sahifadan nasiya/to'lov — saqlagach modal yopiladi (bosh sahifada qolamiz)
 function TxnModal(props){
   const type=props.type,db=props.db,run=props.run,onClose=props.onClose;
-  // picked: null | {existingId} | {__new,name,phone}. Har render'da yangi db'dan topamiz.
-  const [pick,setPick]=useState(null);
+  const [picked,setPicked]=useState(null); // mijoz obyekti yoki {__new,name,phone}
   const [amount,setAmount]=useState(""); const [note,setNote]=useState(""); const [op,setOp]=useState(null);
   const okMsg=type==="debt"?"Nasiya qo'shildi":"To'lov qabul qilindi";
-  // pickerValue: CustomerPicker'ga uzatiladigan obyekt (doim yangi db'dan)
-  const pickerValue = !pick ? null : (pick.__new ? pick : db.customers.find(c=>c.id===pick.existingId) || null);
-  const onPick=(c)=>{
-    if(!c){ setPick(null); return; }
-    if(c.__new){ setPick({__new:true,name:c.name,phone:c.phone}); }
-    else { setPick({existingId:c.id}); }
-  };
+  // Tanlangan mavjud mijozning eng yangi nusxasi (db yangilansa ham to'g'ri qarz ko'rinadi)
+  const fresh = (picked && !picked.__new) ? (db.customers.find(c=>c.id===picked.id) || picked) : picked;
   const doSave=async(amt)=>{
     let cid;
-    if(pick.__new){ cid=uid(); await sb.insert("customers",{id:cid,name:pick.name,phone:pick.phone,note:""}); }
-    else { cid=pick.existingId; }
+    if(picked.__new){ cid=uid(); await sb.insert("customers",{id:cid,name:picked.name,phone:picked.phone,note:""}); }
+    else { cid=picked.id; }
     await sb.insert("customer_txns",{id:uid(),customer_id:cid,type:type,amount:amt,note:note.trim(),date:now()});
   };
   const submit=()=>{
-    const amt=parseInt(amount.replace(/\D/g,""),10); if(!pick||!amt)return;
-    if(type==="pay" && pickerValue && pickerValue.txns){ const debt=Math.abs(Math.min(0,cBal(pickerValue))); if(amt>debt){ setOp({amt:amt,debt:debt,surplus:amt-debt}); return; } }
+    const amt=parseInt(amount.replace(/\D/g,""),10); if(!picked||!amt)return;
+    if(type==="pay" && fresh && fresh.txns){ const debt=Math.abs(Math.min(0,cBal(fresh))); if(amt>debt){ setOp({amt:amt,debt:debt,surplus:amt-debt}); return; } }
     run(()=>doSave(amt),okMsg); onClose();
   };
   if(op) return h(Modal,{title:"To'lov qarzdan oshyapti",onClose:()=>setOp(null)},
     h("p",{className:"text-gray-600 mb-2"},"Qarz: ",h("b",null,fmt(op.debt)),", to'lov: ",h("b",null,fmt(op.amt)),"."),
     h("p",{className:"text-gray-600 mb-4"},"Ortiqcha ",h("b",{className:"text-emerald-600"},fmt(op.surplus))," so'mni haqdor (+) qilaylikmi?"),
     h("div",{className:"grid grid-cols-2 gap-3"},
-      h("button",{onClick:()=>{run(()=>doSave(op.debt),okMsg);setOp(null);onClose();},className:"py-3 rounded-xl border text-gray-600 text-sm font-medium"},"Yo'q, qarzni yop"),
-      h("button",{onClick:()=>{run(()=>doSave(op.amt),okMsg);setOp(null);onClose();},className:"py-3 rounded-xl bg-emerald-500 text-white text-sm font-semibold"},"Ha, haqdor qil")));
+      h("button",{onPointerUp:()=>{run(()=>doSave(op.debt),okMsg);setOp(null);onClose();},className:"py-3 rounded-xl border text-gray-600 text-sm font-medium"},"Yo'q, qarzni yop"),
+      h("button",{onPointerUp:()=>{run(()=>doSave(op.amt),okMsg);setOp(null);onClose();},className:"py-3 rounded-xl bg-emerald-500 text-white text-sm font-semibold"},"Ha, haqdor qil")));
   return h(Modal,{title:type==="debt"?"Nasiya qo'shish":"To'lov qilish",onClose:onClose},
-    h(Field,{label:"Mijoz"},h(CustomerPicker,{db:db,value:pickerValue,onPick:onPick})),
+    h(Field,{label:"Mijoz"},h(CustomerPicker,{db:db,value:fresh,onPick:setPicked})),
     h(Field,{label:type==="debt"?"Nasiya summasi":"To'lov summasi"},h("input",{className:inputCls,inputMode:"numeric",placeholder:"0",value:amount?fmt(parseInt(amount.replace(/\D/g,""))||""):"",onChange:(e)=>setAmount(e.target.value)})),
     h(Field,{label:"Izoh"},h("input",{className:inputCls,value:note,onChange:(e)=>setNote(e.target.value),placeholder:"ixtiyoriy"})),
-    h("button",{onClick:submit,className:"w-full py-3 rounded-xl text-white font-semibold "+(type==="debt"?"bg-rose-500":"bg-emerald-500")},"Saqlash"));
+    h("button",{onPointerUp:submit,className:"w-full py-3 rounded-xl text-white font-semibold "+(type==="debt"?"bg-rose-500":"bg-emerald-500")},"Saqlash"));
 }
 
 // ===== CUSTOMERS =====
