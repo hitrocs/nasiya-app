@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Mini Market</title>
+<title>Smart Market</title>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -282,17 +282,22 @@ function CustomersPage(props){
       h("div",null,h("div",{className:"font-medium text-gray-800"},c.name),h("div",{className:"text-xs text-gray-400"},(c.phone||"—")+(c.note?" • "+c.note:""))),
       h("div",{className:"font-semibold "+balColor(c.bal)},signed(c.bal)))),
       list.length===0&&h("div",{className:"text-center text-gray-400 py-8"},"Mijoz yo'q")),
-    addOpen&&h(CustomerEditModal,{run:run,onClose:()=>setAddOpen(false)}));
+    addOpen&&h(CustomerEditModal,{run:run,db:db,onClose:()=>setAddOpen(false)}));
 }
 function CustomerEditModal(props){
-  const ex=props.existing;
+  const ex=props.existing; const db=props.db;
   const [name,setName]=useState(ex?ex.name:""); const [phone,setPhone]=useState(ex?ex.phone:""); const [note,setNote]=useState(ex?ex.note:"");
   const save=()=>{if(!name.trim())return;
     if(ex)props.run(()=>sb.update("customers",ex.id,{name:name.trim(),phone:phone.trim(),note:note.trim()}),"Saqlandi");
     else props.run(()=>sb.insert("customers",{id:uid(),name:name.trim(),phone:phone.trim(),note:note.trim()}),"Mijoz qo'shildi");
     props.onClose();};
+  // Yangi mijoz qo'shayotganda (ex yo'q) shu nomga o'xshash mavjud mijozlarni ko'rsatamiz
+  const dup = (!ex && name.trim() && db) ? db.customers.filter(c=>c.name.toLowerCase().indexOf(name.trim().toLowerCase())>=0).slice(0,4) : [];
   return h(Modal,{title:ex?"Tahrirlash":"Yangi mijoz",onClose:props.onClose},
-    h(Field,{label:"Ism"},h("input",{className:inputCls,value:name,onChange:(e)=>setName(e.target.value)})),
+    h(Field,{label:"Ism"},h("input",{className:inputCls,value:name,onChange:(e)=>setName(e.target.value),autoFocus:!ex})),
+    dup.length>0 && h("div",{className:"mb-3 p-2 bg-amber-50 border border-amber-200 rounded-xl"},
+      h("div",{className:"text-xs text-amber-700"},"⚠️ Shu nomga o'xshash mijoz(lar) allaqachon bor:"),
+      dup.map(c=>h("div",{key:c.id,className:"text-sm text-gray-700 mt-1"},"• ",c.name," ",h("span",{className:"text-xs text-gray-400"},c.phone)))),
     h(Field,{label:"Telefon"},h(PhoneInput,{value:phone,onChange:setPhone})),
     h(Field,{label:"Izoh"},h("input",{className:inputCls,value:note,onChange:(e)=>setNote(e.target.value)})),
     h("button",{onClick:save,className:"w-full bg-emerald-500 text-white py-3 rounded-xl font-semibold"},"Saqlash"));
