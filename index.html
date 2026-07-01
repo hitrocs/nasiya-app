@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Smart Market</title>
+<title>Mini Market</title>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -12,22 +12,21 @@
 <body class="bg-gray-50">
 <div id="root"></div>
 <script>
-// htm — JSX o'rniga, Babel'siz. Brauzer to'g'ridan-to'g'ri o'qiydi.
 const { useState, useEffect, useMemo, useRef, createElement } = React;
 const h = createElement;
 
-// ===== Supabase =====
+// ===== Supabase config =====
 const SUPABASE_URL = "https://zdnaphtdzfmoxhptnqyd.supabase.co";
-// ⚠️ Supabase > Settings > API > "anon public" kalitini shu yerga qo'y (tirnoq ichiga):
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpkbmFwaHRkemZtb3hocHRucXlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNDM4MzgsImV4cCI6MjA5NzcxOTgzOH0.AQITLZJf4-txQDeW7Myn-LvEBaqSMZS5pSdHOYzhgf0";
-// ⚠️ Appga kirish paroli — buni o'zgartir (faqat sen va xodiming biladi):
-const APP_PASSWORD = "market2026";
+// ⚠️ Supabase > Settings > API > "anon public" kalitini shu yerga qo'y:
+const SUPABASE_KEY = "BU_YERGA_ANON_PUBLIC_KALITNI_QOY";
+// ⚠️ Appga kirish paroli (o'zgartir):
+const APP_PASSWORD = "market2024";
+
 const HDR = { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY, "Content-Type": "application/json" };
 const sb = {
   select: async (t) => { const r = await fetch(SUPABASE_URL+"/rest/v1/"+t+"?select=*",{headers:HDR}); if(!r.ok) throw new Error(await r.text()); return r.json(); },
   insert: async (t,row) => { const r = await fetch(SUPABASE_URL+"/rest/v1/"+t,{method:"POST",headers:Object.assign({},HDR,{Prefer:"return=minimal"}),body:JSON.stringify(row)}); if(!r.ok) throw new Error(await r.text()); },
   update: async (t,id,p) => { const r = await fetch(SUPABASE_URL+"/rest/v1/"+t+"?id=eq."+id,{method:"PATCH",headers:Object.assign({},HDR,{Prefer:"return=minimal"}),body:JSON.stringify(p)}); if(!r.ok) throw new Error(await r.text()); },
-  remove: async (t,id) => { const r = await fetch(SUPABASE_URL+"/rest/v1/"+t+"?id=eq."+id,{method:"DELETE",headers:HDR}); if(!r.ok) throw new Error(await r.text()); },
 };
 async function fetchDB(){
   const res = await Promise.all([sb.select("customers"),sb.select("partners"),sb.select("customer_txns"),sb.select("partner_txns"),sb.select("cash_entries")]);
@@ -53,7 +52,20 @@ const pBal = (p)=>p.txns.reduce((s,t)=>s+(t.deleted?0:(t.type==="buy"?t.amount:-
 const inputCls = "w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 text-gray-800";
 const fp = (raw)=>{let d=(raw||"").replace(/\D/g,"");if(d.indexOf("998")===0)d=d.slice(3);d=d.slice(0,9);let o="+998";if(d.length>0)o+=" "+d.slice(0,2);if(d.length>2)o+=" "+d.slice(2,5);if(d.length>5)o+=" "+d.slice(5,7);if(d.length>7)o+=" "+d.slice(7,9);return o;};
 
-// ===== Icon (oddiy emoji-siz SVG path) =====
+// ===== Toast =====
+let toastFn = null;
+function notify(msg, ok){ if(toastFn) toastFn(msg, ok!==false); }
+function Toast(){
+  const [t,setT]=useState(null); const timer=useRef(null);
+  useEffect(()=>{ toastFn=(msg,ok)=>{ setT({msg,ok}); if(timer.current)clearTimeout(timer.current); timer.current=setTimeout(()=>setT(null),3000); }; return ()=>{toastFn=null;}; },[]);
+  if(!t) return null;
+  return h("div",{className:"fixed top-4 left-1/2 -translate-x-1/2 z-[60] w-[90%] max-w-sm",onClick:()=>setT(null)},
+    h("div",{className:"flex items-center justify-between gap-3 px-4 py-3 rounded-xl shadow-lg text-white "+(t.ok?"bg-emerald-600":"bg-rose-600")},
+      h("span",{className:"text-sm font-medium"},t.msg),
+      h("button",{onClick:()=>setT(null),className:"text-white/80 p-1"},IcX(18))));
+}
+
+// ===== Icons =====
 function Svg(path,s){ return h("svg",{width:s||20,height:s||20,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round"}, path.map((d,i)=>h("path",{key:i,d:d}))); }
 const IcHome=(s)=>Svg(["M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z","M9 22V12h6v10"],s);
 const IcUsers=(s)=>Svg(["M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2","M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z","M23 21v-2a4 4 0 0 0-3-3.87"],s);
@@ -72,7 +84,6 @@ const IcWifiOff=(s)=>Svg(["M1 1l22 22","M16.72 11.06A10.94 10.94 0 0 1 19 12.55"
 
 // ===== UI helpers =====
 function Modal(props){
-  // Faqat orqa fonning o'ziga bosilganda yopiladi. onClick ishlatamiz (Android'da onPointerUp modalni tez yopib yuboradi).
   const onBg=(e)=>{ if(e.target===e.currentTarget) props.onClose(); };
   return h("div",{className:"fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40",onClick:onBg},
     h("div",{className:"bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl max-h-[92vh] overflow-y-auto"},
@@ -101,43 +112,33 @@ function AmountModal(props){
     h("div",{className:"text-xs text-gray-400 mb-3"},"Sana: "+fmtDate(now())),
     h("button",{onClick:submit,className:"w-full py-3 rounded-xl text-white font-semibold "+cc},"Saqlash"));
 }
+
+// ===== Customer picker (mavjud nasiya bilan) =====
 function CustomerPicker(props){
   const db=props.db,value=props.value,onPick=props.onPick;
   const [q,setQ]=useState(""); const [adding,setAdding]=useState(false); const [nn,setNN]=useState(""); const [np,setNP]=useState("");
   const matches=useMemo(()=>!q.trim()?[]:db.customers.filter(c=>c.name.toLowerCase().indexOf(q.toLowerCase())>=0).slice(0,6),[q,db.customers]);
-
-  if(value) return h("div",{className:"bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2.5"},
-    h("div",{className:"flex items-center justify-between"},
-      h("div",null,h("div",{className:"font-medium text-gray-800"},value.name),h("div",{className:"text-xs text-gray-500"},value.phone)),
-      h("button",{onClick:()=>onPick(null),className:"text-gray-400 p-1"},IcX(18))),
-    (function(){ if(!value.txns) return null; var b=cBal(value); return h("div",{className:"text-sm mt-1 pt-1 border-t border-emerald-200"},"Mavjud qarzi: ",h("span",{className:"font-semibold "+balColor(b)},b<0?"- "+fmt(Math.abs(b))+" so'm":b>0?"+ "+fmt(b)+" so'm":"0 so'm")); })());
-  
+  if(value){
+    const isExisting = !!value.txns;
+    const b = isExisting ? cBal(value) : null;
+    return h("div",{className:"bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2.5"},
+      h("div",{className:"flex items-center justify-between"},
+        h("div",null,h("div",{className:"font-medium text-gray-800"},value.name),h("div",{className:"text-xs text-gray-500"},value.phone)),
+        h("button",{onClick:()=>onPick(null),className:"text-gray-400 p-1"},IcX(18))),
+      isExisting && h("div",{className:"text-sm mt-1.5 pt-1.5 border-t border-emerald-200"},
+        "Mavjud qarzi: ",
+        h("span",{className:"font-semibold "+balColor(b)}, b<0?"- "+fmt(Math.abs(b))+" so'm" : b>0?"- "+fmt(b)+" so'm" : "Qarz yo'q")));
+  }
   return h("div",null,
     h("input",{className:inputCls,placeholder:"Mijoz ismini yozing...",value:q,onChange:(e)=>{setQ(e.target.value);setAdding(false);}}),
     q.trim()&&h("div",{className:"mt-1 border border-gray-200 rounded-xl overflow-hidden"},
-      matches.map(c=>h("button",{key:c.id,onPointerUp:()=>onPick(c),className:"w-full text-left px-3 py-2.5 hover:bg-gray-50 border-b last:border-0"},
+      matches.map(c=>h("button",{key:c.id,onClick:()=>onPick(c),className:"w-full text-left px-3 py-2.5 hover:bg-gray-50 border-b last:border-0"},
         h("div",{className:"font-medium text-gray-800"},c.name),h("div",{className:"text-xs text-gray-500"},c.phone))),
-      matches.length===0&&!adding&&h("button",{onPointerUp:()=>{setAdding(true);setNN(q);},className:"w-full text-left px-3 py-2.5 text-emerald-600 font-medium flex items-center gap-2"},IcPlus(16),' "'+q+'" — yangi mijoz qo\'shish')),
+      matches.length===0&&!adding&&h("button",{onClick:()=>{setAdding(true);setNN(q);},className:"w-full text-left px-3 py-2.5 text-emerald-600 font-medium flex items-center gap-2"},IcPlus(16),' "'+q+'" — yangi mijoz qo\'shish')),
     adding&&h("div",{className:"mt-2 p-3 bg-gray-50 rounded-xl"},
       h("input",{className:inputCls+" mb-2",placeholder:"Ism",value:nn,onChange:(e)=>setNN(e.target.value)}),
       h("div",{className:"mb-2"},h(PhoneInput,{value:np,onChange:setNP})),
-      h("button",{onPointerUp:()=>{if(nn.trim())onPick({__new:true,name:nn.trim(),phone:np.trim()});},className:"w-full bg-emerald-500 text-white py-3 rounded-xl font-medium"},"Qo'shish va tanlash")));
-}
-
-// ===== Login ekrani =====
-function Login(props){
-  const [pw,setPw]=useState(""); const [err,setErr]=useState(false);
-  const submit=()=>{ if(pw===APP_PASSWORD){ try{localStorage.setItem("mm_auth","ok");}catch(e){} props.onOk(); } else { setErr(true); } };
-  return h("div",{className:"min-h-screen flex items-center justify-center p-6 bg-gray-50"},
-    h("div",{className:"w-full max-w-xs"},
-      h("div",{className:"text-center mb-6"},
-        h("div",{className:"text-2xl font-bold text-gray-800"},"Mini Market"),
-        h("div",{className:"text-sm text-gray-500 mt-1"},"Kirish uchun parol kiriting")),
-      h("input",{className:inputCls+" mb-2",type:"password",placeholder:"Parol",value:pw,
-        onChange:(e)=>{setPw(e.target.value);setErr(false);},
-        onKeyDown:(e)=>{if(e.key==="Enter")submit();},autoFocus:true}),
-      err&&h("div",{className:"text-rose-500 text-sm mb-2 text-center"},"Parol noto'g'ri"),
-      h("button",{onClick:submit,className:"w-full bg-emerald-500 text-white py-3 rounded-xl font-semibold mt-1"},"Kirish")));
+      h("button",{onClick:()=>{if(nn.trim())onPick({__new:true,name:nn.trim(),phone:np.trim()});},className:"w-full bg-emerald-500 text-white py-3 rounded-xl font-medium"},"Qo'shish va tanlash")));
 }
 
 // ===== App =====
@@ -147,7 +148,7 @@ function App(){
   const [status,setStatus]=useState("loading"); const [errMsg,setErrMsg]=useState(""); const pollRef=useRef(null);
   const reload=async()=>{try{const d=await fetchDB();setDb(d);setStatus("online");}catch(e){setStatus("error");setErrMsg(String(e.message||e));}};
   useEffect(()=>{ if(!authed)return; reload();pollRef.current=setInterval(reload,4000);return()=>clearInterval(pollRef.current); },[authed]);
-  const run=async(fn)=>{try{await fn();await reload();}catch(e){setStatus("error");setErrMsg(String(e.message||e));alert("Xatolik: "+(e.message||e));}};
+  const run=async(fn,okMsg)=>{try{await fn();await reload();if(okMsg)notify(okMsg,true);}catch(e){setStatus("error");setErrMsg(String(e.message||e));notify("Xatolik: "+(e.message||e),false);}};
   if(!authed) return h(Login,{onOk:()=>setAuthed(true)});
   if(status==="loading"&&!db) return h("div",{className:"p-8 text-center text-gray-400"},"Yuklanmoqda...");
   if(status==="error"&&!db) return h("div",{className:"p-8 text-center"},
@@ -156,23 +157,37 @@ function App(){
     h("div",{className:"text-xs text-gray-400 mb-4 break-all"},errMsg),
     h("button",{onClick:reload,className:"bg-emerald-500 text-white px-5 py-2 rounded-xl"},"Qayta urinish"));
   const nav=[["home",IcHome,"Bosh sahifa"],["customers",IcUsers,"Mijozlar"],["cash",IcCash,"Chiqimlar"],["partners",IcBuild,"Hamkorlar"]];
+  const goCustomer=(id)=>setView({page:"customer",id}); const goPartner=(id)=>setView({page:"partner",id}); const backList=()=>setView({page:null});
   let page;
   if(tab==="home") page=h(HomePage,{db,run,status});
-  else if(tab==="customers") page=view.page==="customer"?h(CustomerDetail,{db,run,id:view.id,back:()=>setView({page:null})}):h(CustomersPage,{db,run,open:(id)=>setView({page:"customer",id})});
+  else if(tab==="customers") page=view.page==="customer"?h(CustomerDetail,{db,run,id:view.id,back:backList}):h(CustomersPage,{db,run,open:goCustomer});
   else if(tab==="cash") page=h(CashPage,{db,run});
-  else if(tab==="partners") page=view.page==="partner"?h(PartnerDetail,{db,run,id:view.id,back:()=>setView({page:null})}):h(PartnersPage,{db,run,open:(id)=>setView({page:"partner",id})});
+  else if(tab==="partners") page=view.page==="partner"?h(PartnerDetail,{db,run,id:view.id,back:backList}):h(PartnersPage,{db,run,open:goPartner});
   return h("div",{className:"max-w-md mx-auto min-h-screen bg-gray-50 flex flex-col"},
+    h(Toast),
     h("div",{className:"flex-1 overflow-y-auto pb-20"},page),
     h("nav",{className:"fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t flex"},
       nav.map(n=>h("button",{key:n[0],onClick:()=>{setTab(n[0]);setView({page:null});},className:"flex-1 flex flex-col items-center py-2 text-xs "+(tab===n[0]?"text-emerald-600":"text-gray-400")},n[1](20),h("span",{className:"mt-0.5"},n[2])))));
 }
 
+function Login(props){
+  const [pw,setPw]=useState(""); const [err,setErr]=useState(false);
+  const submit=()=>{ if(pw===APP_PASSWORD){ try{localStorage.setItem("mm_auth","ok");}catch(e){} props.onOk(); } else { setErr(true); } };
+  return h("div",{className:"min-h-screen flex items-center justify-center p-6 bg-gray-50"},
+    h("div",{className:"w-full max-w-xs"},
+      h("div",{className:"text-center mb-6"},h("div",{className:"text-2xl font-bold text-gray-800"},"Mini Market"),h("div",{className:"text-sm text-gray-500 mt-1"},"Kirish uchun parol kiriting")),
+      h("input",{className:inputCls+" mb-2",type:"password",placeholder:"Parol",value:pw,onChange:(e)=>{setPw(e.target.value);setErr(false);},onKeyDown:(e)=>{if(e.key==="Enter")submit();},autoFocus:true}),
+      err&&h("div",{className:"text-rose-500 text-sm mb-2 text-center"},"Parol noto'g'ri"),
+      h("button",{onClick:submit,className:"w-full bg-emerald-500 text-white py-3 rounded-xl font-semibold mt-1"},"Kirish")));
+}
+
+// ===== HOME =====
 function HomePage(props){
   const db=props.db,run=props.run,status=props.status;
   const [modal,setModal]=useState(null); const [filter,setFilter]=useState("today"); const [cr,setCR]=useState({from:"",to:""}); const [showCal,setShowCal]=useState(false);
   const debtors=db.customers.filter(c=>cBal(c)<0);
   const totalDebt=debtors.reduce((s,c)=>s+Math.abs(cBal(c)),0);
-  const all=db.customers.flatMap(c=>c.txns.map(t=>Object.assign({},t,{customer:c.name})));
+  const all=db.customers.flatMap(c=>c.txns.filter(t=>!t.deleted).map(t=>Object.assign({},t,{customer:c.name})));
   const tdD=all.filter(t=>t.type==="debt"&&isSameDay(t.date,now())); const tdP=all.filter(t=>t.type==="pay"&&isSameDay(t.date,now()));
   const inR=(iso)=>{const d=new Date(iso),n=new Date();
     if(filter==="today")return isSameDay(iso,now());
@@ -209,33 +224,36 @@ function HomePage(props){
         h("div",null,h("div",{className:"font-medium text-gray-800"},t.customer),h("div",{className:"text-xs text-gray-400"},fmtDate(t.date)+(t.note?" • "+t.note:""))),
         h("div",{className:"font-semibold "+(t.type==="debt"?"text-rose-500":"text-emerald-500")},(t.type==="debt"?"−":"+")+fmt(t.amount)))),
       rng.length===0&&h("div",{className:"text-center text-gray-400 py-6"},"Amal yo'q")),
-    modal&&h(TxnModal,{type:modal,db,run,onClose:()=>setModal(null)}),
+    modal&&h(TxnModal,{type:modal,db:db,run:run,onClose:()=>setModal(null)}),
     showCal&&h(Modal,{title:"Sana yoki oraliq tanlash",onClose:()=>setShowCal(false)},
       h(Field,{label:"Dan"},h("input",{type:"date",className:inputCls,value:cr.from,onChange:(e)=>setCR(Object.assign({},cr,{from:e.target.value}))})),
       h(Field,{label:"Gacha (ixtiyoriy)"},h("input",{type:"date",className:inputCls,value:cr.to,onChange:(e)=>setCR(Object.assign({},cr,{to:e.target.value}))})),
       h("button",{onClick:()=>{if(cr.from){setFilter("custom");setShowCal(false);}},className:"w-full bg-emerald-500 text-white py-3 rounded-xl font-semibold mt-1"},"Ko'rsatish")));
 }
 
+// Bosh sahifadan nasiya/to'lov — saqlagach modal yopiladi (bosh sahifada qolamiz)
 function TxnModal(props){
   const type=props.type,db=props.db,run=props.run,onClose=props.onClose;
   const [picked,setPicked]=useState(null); const [amount,setAmount]=useState(""); const [note,setNote]=useState(""); const [op,setOp]=useState(null);
-  const doSave=async(cust,amt)=>{let cid=cust.id;if(cust.__new){cid=uid();await sb.insert("customers",{id:cid,name:cust.name,phone:cust.phone,note:""});}await sb.insert("customer_txns",{id:uid(),customer_id:cid,type,amount:amt,note:note.trim(),date:now()});};
+  const okMsg=type==="debt"?"Nasiya qo'shildi":"To'lov qabul qilindi";
+  const doSave=async(cust,amt)=>{let cid=cust.id;if(cust.__new){cid=uid();await sb.insert("customers",{id:cid,name:cust.name,phone:cust.phone,note:""});}await sb.insert("customer_txns",{id:uid(),customer_id:cid,type:type,amount:amt,note:note.trim(),date:now()});};
   const submit=()=>{const amt=parseInt(amount.replace(/\D/g,""),10);if(!picked||!amt)return;
-    if(type==="pay"){const c=picked.__new?{txns:[]}:db.customers.find(x=>x.id===picked.id);const debt=c?Math.abs(Math.min(0,cBal(c))):0;if(amt>debt){setOp({amt,debt,surplus:amt-debt});return;}}
-    run(()=>doSave(picked,amt));onClose();};
+    if(type==="pay"&&picked.txns){const debt=Math.abs(Math.min(0,cBal(picked)));if(amt>debt){setOp({amt:amt,debt:debt,surplus:amt-debt});return;}}
+    run(()=>doSave(picked,amt),okMsg);onClose();};
   if(op) return h(Modal,{title:"To'lov qarzdan oshyapti",onClose:()=>setOp(null)},
     h("p",{className:"text-gray-600 mb-2"},"Qarz: ",h("b",null,fmt(op.debt)),", to'lov: ",h("b",null,fmt(op.amt)),"."),
     h("p",{className:"text-gray-600 mb-4"},"Ortiqcha ",h("b",{className:"text-emerald-600"},fmt(op.surplus))," so'mni haqdor (+) qilaylikmi?"),
     h("div",{className:"grid grid-cols-2 gap-3"},
-      h("button",{onClick:()=>{run(()=>doSave(picked,op.debt));setOp(null);onClose();},className:"py-3 rounded-xl border text-gray-600 text-sm font-medium"},"Yo'q, qarzni yop"),
-      h("button",{onClick:()=>{run(()=>doSave(picked,op.amt));setOp(null);onClose();},className:"py-3 rounded-xl bg-emerald-500 text-white text-sm font-semibold"},"Ha, haqdor qil")));
-  return h(Modal,{title:type==="debt"?"Nasiya qo'shish":"To'lov qilish",onClose},
-    h(Field,{label:"Mijoz"},h(CustomerPicker,{db,value:picked&&!picked.__new?db.customers.find(c=>c.id===picked.id):picked,onPick:setPicked})),
+      h("button",{onClick:()=>{run(()=>doSave(picked,op.debt),okMsg);setOp(null);onClose();},className:"py-3 rounded-xl border text-gray-600 text-sm font-medium"},"Yo'q, qarzni yop"),
+      h("button",{onClick:()=>{run(()=>doSave(picked,op.amt),okMsg);setOp(null);onClose();},className:"py-3 rounded-xl bg-emerald-500 text-white text-sm font-semibold"},"Ha, haqdor qil")));
+  return h(Modal,{title:type==="debt"?"Nasiya qo'shish":"To'lov qilish",onClose:onClose},
+    h(Field,{label:"Mijoz"},h(CustomerPicker,{db:db,value:picked,onPick:setPicked})),
     h(Field,{label:type==="debt"?"Nasiya summasi":"To'lov summasi"},h("input",{className:inputCls,inputMode:"numeric",placeholder:"0",value:amount?fmt(parseInt(amount.replace(/\D/g,""))||""):"",onChange:(e)=>setAmount(e.target.value)})),
     h(Field,{label:"Izoh"},h("input",{className:inputCls,value:note,onChange:(e)=>setNote(e.target.value),placeholder:"ixtiyoriy"})),
     h("button",{onClick:submit,className:"w-full py-3 rounded-xl text-white font-semibold "+(type==="debt"?"bg-rose-500":"bg-emerald-500")},"Saqlash"));
 }
 
+// ===== CUSTOMERS =====
 function CustomersPage(props){
   const db=props.db,run=props.run,open=props.open;
   const [q,setQ]=useState(""); const [sort,setSort]=useState("all"); const [addOpen,setAddOpen]=useState(false);
@@ -254,12 +272,15 @@ function CustomersPage(props){
       h("div",null,h("div",{className:"font-medium text-gray-800"},c.name),h("div",{className:"text-xs text-gray-400"},(c.phone||"—")+(c.note?" • "+c.note:""))),
       h("div",{className:"font-semibold "+balColor(c.bal)},signed(c.bal)))),
       list.length===0&&h("div",{className:"text-center text-gray-400 py-8"},"Mijoz yo'q")),
-    addOpen&&h(CustomerEditModal,{run,onClose:()=>setAddOpen(false)}));
+    addOpen&&h(CustomerEditModal,{run:run,onClose:()=>setAddOpen(false)}));
 }
 function CustomerEditModal(props){
   const ex=props.existing;
   const [name,setName]=useState(ex?ex.name:""); const [phone,setPhone]=useState(ex?ex.phone:""); const [note,setNote]=useState(ex?ex.note:"");
-  const save=()=>{if(!name.trim())return;if(ex)props.run(()=>sb.update("customers",ex.id,{name:name.trim(),phone:phone.trim(),note:note.trim()}));else props.run(()=>sb.insert("customers",{id:uid(),name:name.trim(),phone:phone.trim(),note:note.trim()}));props.onClose();};
+  const save=()=>{if(!name.trim())return;
+    if(ex)props.run(()=>sb.update("customers",ex.id,{name:name.trim(),phone:phone.trim(),note:note.trim()}),"Saqlandi");
+    else props.run(()=>sb.insert("customers",{id:uid(),name:name.trim(),phone:phone.trim(),note:note.trim()}),"Mijoz qo'shildi");
+    props.onClose();};
   return h(Modal,{title:ex?"Tahrirlash":"Yangi mijoz",onClose:props.onClose},
     h(Field,{label:"Ism"},h("input",{className:inputCls,value:name,onChange:(e)=>setName(e.target.value)})),
     h(Field,{label:"Telefon"},h(PhoneInput,{value:phone,onChange:setPhone})),
@@ -273,8 +294,8 @@ function CustomerDetail(props){
   if(!c) return h("div",{className:"p-4"},h("button",{onClick:back,className:"flex items-center gap-1 text-gray-500"},IcBack(18)," Orqaga"));
   const bal=cBal(c),debt=Math.abs(Math.min(0,bal));
   const txns=c.txns.slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
-  const push=(t,a,n)=>run(()=>sb.insert("customer_txns",{id:uid(),customer_id:id,type:t,amount:a,note:n,date:now()}));
-  const delTxn=(tid)=>run(()=>sb.update("customer_txns",tid,{deleted:true}));
+  const push=(t,a,n)=>run(()=>sb.insert("customer_txns",{id:uid(),customer_id:id,type:t,amount:a,note:n,date:now()}),t==="debt"?"Nasiya qo'shildi":"To'lov qabul qilindi");
+  const delTxn=(tid)=>run(()=>sb.update("customer_txns",tid,{deleted:true}),"O'chirildi");
   const hSub=(t,a,n)=>{if(t==="pay"&&a>debt){setOp({amt:a,note:n,surplus:a-debt});return;}push(t,a,n);};
   return h("div",{className:"p-4"},
     h("button",{onClick:back,className:"flex items-center gap-1 text-gray-500 mb-3"},IcBack(18)," Orqaga"),
@@ -283,30 +304,28 @@ function CustomerDetail(props){
         h("div",null,h("div",{className:"text-lg font-bold text-gray-800"},c.name),
           c.phone&&h("a",{href:"tel:"+c.phone,className:"text-emerald-600 text-sm flex items-center gap-1 mt-0.5"},IcPhone(14)," "+c.phone),
           c.note&&h("div",{className:"text-sm text-gray-400 mt-1"},c.note)),
-        h("div",{className:"flex gap-1"},h("button",{onClick:()=>setEdit(true),className:"p-2 text-gray-400"},IcEdit(18)))),
+        h("button",{onClick:()=>setEdit(true),className:"p-2 text-gray-400"},IcEdit(18))),
       h("div",{className:"mt-3 pt-3 border-t"},h("span",{className:"text-gray-500 text-sm"},bal<0?"Nasiya (qarzdor): ":bal>0?"Haqdor: ":"Balans: "),h("span",{className:"text-xl font-bold "+balColor(bal)},signed(bal)+" so'm"))),
     h("div",{className:"grid grid-cols-2 gap-3 mb-4"},h("button",{onClick:()=>setModal("debt"),className:"bg-rose-500 text-white py-2.5 rounded-xl font-medium"},"+ Qarz qo'shish"),h("button",{onClick:()=>setModal("pay"),className:"bg-emerald-500 text-white py-2.5 rounded-xl font-medium"},"To'lov qabul")),
     h("h3",{className:"font-semibold text-gray-700 mb-2"},"Tarix"),
     h("div",{className:"space-y-2"},txns.map(t=>h("div",{key:t.id,className:"bg-white rounded-xl p-3 border flex items-center justify-between "+(t.deleted?"opacity-40 line-through":"")},
       h("div",null,h("div",{className:"text-sm text-gray-600"},(t.type==="debt"?"Nasiya":"To'lov")+(t.deleted?" (o'chirilgan)":"")),h("div",{className:"text-xs text-gray-400"},fmtDate(t.date)+(t.note?" • "+t.note:""))),
       h("div",{className:"flex items-center gap-2"},h("span",{className:"font-semibold "+(t.type==="debt"?"text-rose-500":"text-emerald-500")},(t.type==="debt"?"−":"+")+fmt(t.amount)),
-        !t.deleted&&h("button",{onClick:()=>setCf({type:"txn",tid:t.id}),className:"text-gray-300 no-underline"},IcTrash(16))))),
+        !t.deleted&&h("button",{onClick:()=>setCf({tid:t.id}),className:"text-gray-300"},IcTrash(16))))),
       txns.length===0&&h("div",{className:"text-center text-gray-400 py-6"},"Tarix yo'q")),
-    edit&&h(CustomerEditModal,{run,existing:c,onClose:()=>setEdit(false)}),
+    edit&&h(CustomerEditModal,{run:run,existing:c,onClose:()=>setEdit(false)}),
     modal&&h(AmountModal,{title:modal==="debt"?"Qarz qo'shish":"To'lov qabul qilish",label:modal==="debt"?"Nasiya summasi":"To'lov summasi",color:modal==="debt"?"rose":"emerald",onSubmit:(a,n)=>hSub(modal,a,n),onClose:()=>setModal(null)}),
     op&&h(Modal,{title:"To'lov qarzdan oshyapti",onClose:()=>setOp(null)},
       h("p",{className:"text-gray-600 mb-2"},"Qarz: ",h("b",null,fmt(debt)),", to'lov: ",h("b",null,fmt(op.amt)),"."),
       h("p",{className:"text-gray-600 mb-4"},"Ortiqcha ",h("b",{className:"text-emerald-600"},fmt(op.surplus))," so'mni haqdor (+) qilaylikmi?"),
       h("div",{className:"grid grid-cols-2 gap-3"},h("button",{onClick:()=>{push("pay",debt,op.note);setOp(null);},className:"py-3 rounded-xl border text-gray-600 text-sm font-medium"},"Yo'q, qarzni yop"),h("button",{onClick:()=>{push("pay",op.amt,op.note);setOp(null);},className:"py-3 rounded-xl bg-emerald-500 text-white text-sm font-semibold"},"Ha, haqdor qil"))),
-    cf&&h(ConfirmModal,{title:cf.type==="cust"?"Mijozni o'chirish":"Amalni o'chirish",message:cf.type==="cust"?'"'+c.name+'" butunlay o\'chirilsinmi?':"Bu amal o'chirilsinmi?",onConfirm:()=>{if(cf.type==="cust"){run(()=>sb.remove("customers",id));back();}else run(()=>sb.remove("customer_txns",cf.tid));},onClose:()=>setCf(null)}));
+    cf&&h(ConfirmModal,{title:"Amalni o'chirish",message:"Bu amal o'chirilsinmi? (tarixda iz qoladi, balansdan chiqadi)",onConfirm:()=>delTxn(cf.tid),onClose:()=>setCf(null)}));
 }
 
-// ===== CHIQIMLAR / KASSA =====
+// ===== CASH =====
 function CashPage(props){
   const db=props.db,run=props.run;
-  const [modal,setModal]=useState(null); // 'in' | 'out'
-  const [filter,setFilter]=useState("today"); const [cr,setCR]=useState({from:"",to:""}); const [showCal,setShowCal]=useState(false);
-  const [cf,setCf]=useState(null);
+  const [modal,setModal]=useState(null); const [filter,setFilter]=useState("today"); const [cr,setCR]=useState({from:"",to:""}); const [showCal,setShowCal]=useState(false); const [cf,setCf]=useState(null);
   const entries=db.cash.slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
   const live=entries.filter(e=>!e.deleted);
   const todayIn=live.filter(e=>e.type==="in"&&isSameDay(e.date,now())).reduce((s,e)=>s+e.amount,0);
@@ -322,8 +341,8 @@ function CashPage(props){
   const rIn=rngLive.filter(e=>e.type==="in").reduce((s,e)=>s+e.amount,0);
   const rOut=rngLive.filter(e=>e.type==="out").reduce((s,e)=>s+e.amount,0);
   const rLbl=filter!=="custom"||!cr.from?"Sana tanlash":((!cr.to||cr.to===cr.from)?new Date(cr.from).toLocaleDateString("ru-RU"):new Date(cr.from).toLocaleDateString("ru-RU")+" – "+new Date(cr.to).toLocaleDateString("ru-RU"));
-  const addEntry=(type,amt,note)=>run(()=>sb.insert("cash_entries",{id:uid(),type,amount:amt,note:note,date:now()}));
-  const delEntry=(eid)=>run(()=>sb.update("cash_entries",eid,{deleted:true}));
+  const addEntry=(t,a,n)=>run(()=>sb.insert("cash_entries",{id:uid(),type:t,amount:a,note:n,date:now()}),t==="in"?"Kirim qo'shildi":"Chiqim qo'shildi");
+  const delEntry=(eid)=>run(()=>sb.update("cash_entries",eid,{deleted:true}),"O'chirildi");
   return h("div",{className:"p-4"},
     h("h1",{className:"text-xl font-bold text-gray-800 mb-4"},"Chiqimlar / Kassa"),
     h("div",{className:"bg-gradient-to-br from-teal-500 to-emerald-600 rounded-2xl p-5 text-white mb-3"},
@@ -346,7 +365,7 @@ function CashPage(props){
       rng.slice(0,40).map(e=>h("div",{key:e.id,className:"bg-white rounded-xl p-3 border flex items-center justify-between "+(e.deleted?"opacity-40 line-through":"")},
         h("div",null,h("div",{className:"text-sm text-gray-600"},(e.type==="in"?"Kirim":"Chiqim")+(e.deleted?" (o'chirilgan)":"")),h("div",{className:"text-xs text-gray-400"},fmtDate(e.date)+(e.note?" • "+e.note:""))),
         h("div",{className:"flex items-center gap-2"},h("span",{className:"font-semibold "+(e.type==="in"?"text-emerald-500":"text-rose-500")},(e.type==="in"?"+":"−")+fmt(e.amount)),
-          !e.deleted&&h("button",{onClick:()=>setCf({eid:e.id}),className:"text-gray-300 no-underline"},IcTrash(16))))),
+          !e.deleted&&h("button",{onClick:()=>setCf({eid:e.id}),className:"text-gray-300"},IcTrash(16))))),
       rng.length===0&&h("div",{className:"text-center text-gray-400 py-6"},"Amal yo'q")),
     modal&&h(AmountModal,{title:modal==="out"?"Chiqim qo'shish":"Kirim qo'shish",label:modal==="out"?"Chiqim summasi":"Kirim / savdo qoldiq summasi",color:modal==="out"?"rose":"emerald",onSubmit:(a,n)=>addEntry(modal,a,n),onClose:()=>setModal(null)}),
     showCal&&h(Modal,{title:"Sana yoki oraliq tanlash",onClose:()=>setShowCal(false)},
@@ -356,10 +375,11 @@ function CashPage(props){
     cf&&h(ConfirmModal,{title:"Amalni o'chirish",message:"Bu amal o'chirilsinmi? (tarixda iz qoladi)",onConfirm:()=>delEntry(cf.eid),onClose:()=>setCf(null)}));
 }
 
+// ===== PARTNERS =====
 function PartnersPage(props){
   const db=props.db,run=props.run,open=props.open;
   const [addOpen,setAddOpen]=useState(false); const [name,setName]=useState(""); const [phone,setPhone]=useState("");
-  const save=()=>{if(!name.trim())return;run(()=>sb.insert("partners",{id:uid(),name:name.trim(),phone:phone.trim()}));setName("");setPhone("");setAddOpen(false);};
+  const save=()=>{if(!name.trim())return;run(()=>sb.insert("partners",{id:uid(),name:name.trim(),phone:phone.trim()}),"Hamkor qo'shildi");setName("");setPhone("");setAddOpen(false);};
   const owed=db.partners.reduce((s,p)=>s+pBal(p),0);
   return h("div",{className:"p-4"},
     h("div",{className:"flex items-center justify-between mb-3"},h("h1",{className:"text-xl font-bold text-gray-800"},"Hamkorlar ",h("span",{className:"text-sm font-normal text-gray-400"},"("+db.partners.length+" ta)")),
@@ -379,8 +399,8 @@ function PartnerDetail(props){
   const p=db.partners.find(x=>x.id===id); const [modal,setModal]=useState(null); const [cf,setCf]=useState(null);
   if(!p) return h("div",{className:"p-4"},h("button",{onClick:back,className:"flex items-center gap-1 text-gray-500"},IcBack(18)," Orqaga"));
   const bal=pBal(p); const txns=p.txns.slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
-  const add=(t,a,n)=>run(()=>sb.insert("partner_txns",{id:uid(),partner_id:id,type:t,amount:a,note:n,date:now()}));
-  const delTxn=(tid)=>run(()=>sb.update("partner_txns",tid,{deleted:true}));
+  const add=(t,a,n)=>run(()=>sb.insert("partner_txns",{id:uid(),partner_id:id,type:t,amount:a,note:n,date:now()}),t==="buy"?"Nasiya qo'shildi":"To'lov qilindi");
+  const delTxn=(tid)=>run(()=>sb.update("partner_txns",tid,{deleted:true}),"O'chirildi");
   return h("div",{className:"p-4"},
     h("button",{onClick:back,className:"flex items-center gap-1 text-gray-500 mb-3"},IcBack(18)," Orqaga"),
     h("div",{className:"bg-white rounded-2xl p-4 border mb-3"},
@@ -391,10 +411,10 @@ function PartnerDetail(props){
     h("div",{className:"space-y-2"},txns.map(t=>h("div",{key:t.id,className:"bg-white rounded-xl p-3 border flex items-center justify-between "+(t.deleted?"opacity-40 line-through":"")},
       h("div",null,h("div",{className:"text-sm text-gray-600"},(t.type==="buy"?"Nasiya (mol olindi)":"To'lov qilindi")+(t.deleted?" (o'chirilgan)":"")),h("div",{className:"text-xs text-gray-400"},fmtDate(t.date)+(t.note?" • "+t.note:""))),
       h("div",{className:"flex items-center gap-2"},h("span",{className:"font-semibold "+(t.type==="buy"?"text-indigo-600":"text-emerald-500")},(t.type==="buy"?"+":"−")+fmt(t.amount)),
-        !t.deleted&&h("button",{onPointerUp:()=>setCf({type:"txn",tid:t.id}),className:"text-gray-300 no-underline"},IcTrash(16))))),
+        !t.deleted&&h("button",{onClick:()=>setCf({tid:t.id}),className:"text-gray-300"},IcTrash(16))))),
       txns.length===0&&h("div",{className:"text-center text-gray-400 py-6"},"Tarix yo'q")),
     modal&&h(AmountModal,{title:modal==="buy"?"Nasiya qo'shish":"To'lov qilish",label:modal==="buy"?"Nasiya summasi (qarz oshadi)":"To'lov summasi (qarz kamayadi)",color:modal==="buy"?"indigo":"emerald",onSubmit:(a,n)=>add(modal,a,n),onClose:()=>setModal(null)}),
-    cf&&h(ConfirmModal,{title:"Amalni o'chirish",message:"Bu amal o'chirilsinmi? (tarixda iz qoladi, lekin balansdan chiqadi)",onConfirm:()=>delTxn(cf.tid),onClose:()=>setCf(null)}));
+    cf&&h(ConfirmModal,{title:"Amalni o'chirish",message:"Bu amal o'chirilsinmi? (tarixda iz qoladi, balansdan chiqadi)",onConfirm:()=>delTxn(cf.tid),onClose:()=>setCf(null)}));
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(h(App));
